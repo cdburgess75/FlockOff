@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0d1117">
+<meta name="app-version" content="__BUILD_VERSION__">
 <title>ALPR Proximity Map</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -454,6 +455,7 @@
     with any signal or system.</p>
     <p class="muted">Data © OpenStreetMap contributors (ODbL), via the
     Overpass API. Map tiles © OpenStreetMap, CARTO &amp; Esri.</p>
+    <p class="muted">Version <span id="appVersion">dev</span></p>
   </div>
 </div>
 
@@ -1497,6 +1499,16 @@ initGeo();
 setInterval(updateAgeStat, 60000);
 
 /* service-worker registration stripped in demo build */
+
+// Build version — stamped at deploy time (vYYYY.MM.DD.rev). Shows "dev" when
+// running an unbuilt copy (e.g. opened straight from the repo).
+(function () {
+  const m = document.querySelector('meta[name="app-version"]');
+  let v = m ? (m.getAttribute("content") || "") : "";
+  if (!v || v.indexOf("__") === 0) v = "dev";
+  const el = document.getElementById("appVersion");
+  if (el) el.textContent = v;
+})();
 </script>
 <script>
 /* Demo panel wiring (runs after the app has booted). */
