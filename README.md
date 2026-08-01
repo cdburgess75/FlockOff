@@ -41,7 +41,8 @@ tool: mounted and awake, not asleep in your pocket. Hardening this
 (Wake Lock, install prompt, audio-first alerts) is the near-term priority —
 see the roadmap.
 
-- **Alerts:** audible double-beep, red banner, and vibration when the
+- **Alerts:** audible double-beep, red banner, vibration, and optional
+  **spoken callouts** ("license plate reader ahead, 300 meters") when the
   nearest camera crosses the alert radius (default 300 m). Each channel is
   toggleable; there's a master mute. Alerts are debounced — once per camera
   per approach, with a cooldown and hysteresis so a single camera doesn't
@@ -139,18 +140,20 @@ or Google app stores (see [`docs/DIRECTION.md`](docs/DIRECTION.md)).
 
 **Shipped:** coverage/confidence signal ("silence ≠ safety"), PWA install +
 offline app shell, screen Wake Lock, dark basemap with OSM fallback, imperial
-units, one-tap alert/audio start, and an auto-deploy to GitHub Pages.
+units, one-tap alert/audio start, hands-free **voice callouts**, and an
+auto-deploy to GitHub Pages.
 
 Next, ordered by what moves the needle:
 
 1. **Category system** — user-selectable surveillance categories with
    independent *show-on-map* vs *alert* controls and per-category
-   radius/cooldown to manage alert fatigue.
+   radius/cooldown to manage alert fatigue. (First open question: which
+   non-ALPR categories have real OSM coverage — speed cameras and general
+   CCTV do; acoustic/gunshot sensors essentially don't yet.)
 2. **Confidence-gated alerting** — dimmed/silent until confirmed; owner
    allowlist + auto-promote-on-_N_-confirmations.
 3. **Contribute back** — tap-to-add via OSM OAuth, feeding the allowlist.
-4. **Voice callouts** — hands-free, eyes-on-road spoken alerts (Web Speech).
-5. **Live detection (north star)** — a passive BLE/WiFi companion sniffer to
+4. **Live detection (north star)** — a passive BLE/WiFi companion sniffer to
    surface cameras not yet in any database. The only true fix for coverage,
    and by far the hardest build — deliberately deferred.
 

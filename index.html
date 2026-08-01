@@ -291,6 +291,9 @@
   <div class="setting">
     <label>Vibration <input type="checkbox" id="chHaptic" checked></label>
   </div>
+  <div class="setting">
+    <label>Voice callouts <input type="checkbox" id="chVoice"></label>
+  </div>
 
   <h3>Display</h3>
   <div class="setting">
@@ -370,6 +373,7 @@ const DEFAULTS = {
   chAudio: true,
   chVisual: true,
   chHaptic: true,
+  chVoice: false,        // spoken callouts (Web Speech) — opt-in
   muted: false,
   follow: true,
   imperial: false,       // display distances in miles/feet instead of km/m
@@ -769,6 +773,7 @@ let audioCtx = null;
 function fireAlert(cam, dist) {
   if (S.muted) return;
   if (S.chAudio) beep();
+  if (S.chVoice) speak(calloutText(cam, dist));
   if (S.chHaptic && navigator.vibrate) navigator.vibrate([200, 100, 200]);
   // Banner is driven continuously by updateBanner(); the fire just ensures it shows now.
   updateBanner();
@@ -792,6 +797,35 @@ function beep() {
       osc.stop(t0 + start + dur + 0.05);
     }
   } catch (e) {}
+}
+
+/* ---------- Voice callouts (Web Speech) ---------- */
+function speak(text) {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    // Drop any queued/older callout so we always announce the latest, not a
+    // backlog — important when cameras come up in quick succession.
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    u.rate = 1.05;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// Unlock TTS inside a user gesture (iOS requires the first speak() to happen
+// during an interaction), the same way we unlock the beep audio.
+function primeSpeech() {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function calloutText(cam, dist) {
+  return "License plate reader ahead, " + fmtDistSpoken(dist);
 }
 
 function updateBanner() {
@@ -825,6 +859,16 @@ function fmtDist(m) {
 
 function fmtAccuracy(m) {
   return S.imperial ? "±" + Math.round(m * 3.28084) + " ft" : "±" + Math.round(m) + " m";
+}
+
+// Spoken distance — spell the unit out and round to something a voice can say
+// naturally ("three hundred meters", not "294 m").
+function fmtDistSpoken(m) {
+  if (S.imperial) {
+    const ft = m * 3.28084;
+    return ft < 1000 ? Math.round(ft / 10) * 10 + " feet" : (m / 1609.344).toFixed(1) + " miles";
+  }
+  return m < 1000 ? Math.round(m / 10) * 10 + " meters" : (m / 1000).toFixed(1) + " kilometers";
 }
 
 // Slider value labels. The sliders store metric internally (m / km); only the
@@ -969,6 +1013,17 @@ function bindUI() {
   bindCheck("chVisual", "chVisual");
   bindCheck("chHaptic", "chHaptic");
 
+  // Voice: confirm out loud when enabled (that tap also unlocks TTS).
+  const voiceInput = document.getElementById("chVoice");
+  if (voiceInput) {
+    voiceInput.checked = !!S.chVoice;
+    voiceInput.onchange = () => {
+      S.chVoice = voiceInput.checked;
+      saveSettings();
+      if (S.chVoice) speak("Voice callouts on");
+    };
+  }
+
   // Units toggle re-renders every distance currently on screen.
   const imperialInput = document.getElementById("chImperial");
   if (imperialInput) {
@@ -1001,6 +1056,7 @@ function bindUI() {
   // browsers block until a user interaction) and grabs the screen wake lock.
   document.getElementById("btnStart").onclick = () => {
     beepUnlockOnly();
+    primeSpeech();
     wakeLockWanted = true;
     acquireWakeLock();
     document.getElementById("startGate").classList.remove("show");
