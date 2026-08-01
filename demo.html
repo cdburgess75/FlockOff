@@ -238,12 +238,22 @@
   #toast.show { opacity: 1; }
 
   /* ---------- Markers ---------- */
-  .userDot {
-    width: 16px; height: 16px;
-    background: var(--accent);
-    border: 3px solid #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(88,166,255,.9);
+  /* "You are here" — a bright core plus a heading arrow so it's obvious
+     where you are and which way you're pointed. */
+  .userPuck { position: relative; width: 40px; height: 40px; transform: rotate(var(--rot, 0deg)); }
+  .userPuck.noheading .userArrow { display: none; }
+  .userArrow {
+    position: absolute; left: 50%; top: -1px; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 9px solid transparent; border-right: 9px solid transparent;
+    border-bottom: 13px solid var(--accent);
+    filter: drop-shadow(0 0 1.5px #fff);
+  }
+  .userCore {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); border: 4px solid #fff;
+    box-shadow: 0 0 0 2px rgba(88,166,255,.55), 0 0 12px rgba(88,166,255,.95);
   }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     background: var(--panel); color: var(--text);
@@ -583,6 +593,7 @@ const LS_SETTINGS = "alprmap.settings.v1";
 const LS_CACHE    = "alprmap.cameras.v1";
 const LS_VIEW     = "alprmap.lastview.v1";
 const LS_UNITS_MIGRATED = "alprmap.unitsMigrated.v1";
+const LS_BASEMAP_MIGRATED = "alprmap.basemapMigrated.v1";
 
 const DEFAULTS = {
   alertRadiusM: 300,     // alert threshold (m)
@@ -596,7 +607,7 @@ const DEFAULTS = {
   muted: false,
   follow: true,
   imperial: true,        // display distances in miles/feet (US default; toggle in settings)
-  basemap: "dark_all",   // selected map style (see BASEMAPS)
+  basemap: "voyager",    // selected map style — Voyager: clear, readable streets
 };
 
 let S = loadSettings();
@@ -610,6 +621,17 @@ try {
     localStorage.setItem(LS_UNITS_MIGRATED, "1");
   }
 } catch (e) {}
+
+// The map defaulted to a dark style where streets are hard to read. Move
+// installs still on that old default to the clearer Voyager map, once. Anyone
+// who has picked a different style keeps it.
+try {
+  if (!localStorage.getItem(LS_BASEMAP_MIGRATED)) {
+    if (S.basemap === "dark_all") { S.basemap = "voyager"; saveSettings(); }
+    localStorage.setItem(LS_BASEMAP_MIGRATED, "1");
+  }
+} catch (e) {}
+
 function loadSettings() {
   try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}")); }
   catch (e) { return Object.assign({}, DEFAULTS); }
@@ -734,17 +756,22 @@ function onPos(p) {
   const ll = [pos.lat, pos.lon];
   if (!userMarker) {
     userMarker = L.marker(ll, {
-      icon: L.divIcon({ className: "", html: '<div class="userDot"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }),
+      icon: L.divIcon({
+        className: "",
+        html: '<div class="userPuck noheading"><div class="userArrow"></div><div class="userCore"></div></div>',
+        iconSize: [40, 40], iconAnchor: [20, 20],
+      }),
       zIndexOffset: 1000,
     }).addTo(map);
     accCircle = L.circle(ll, {
       radius: pos.accuracy, color: "#58a6ff", weight: 1, opacity: 0.5, fillOpacity: 0.08,
     }).addTo(map);
-    if (map.getZoom() < 13) map.setView(ll, 15);
+    if (map.getZoom() < 14) map.setView(ll, 16);
   } else {
     userMarker.setLatLng(ll);
     accCircle.setLatLng(ll).setRadius(pos.accuracy);
   }
+  updateUserHeading();
 
   if (S.follow) map.panTo(ll, { animate: true, duration: 0.5 });
 
@@ -753,6 +780,19 @@ function onPos(p) {
 
   ensureData(pos.lat, pos.lon);
   checkProximity();
+}
+
+// Point the user arrow along the current heading; hide it when we have no
+// heading (e.g. standing still), so it never lies about which way you face.
+function updateUserHeading() {
+  if (!userMarker) return;
+  const el = userMarker.getElement();
+  if (!el) return;
+  const puck = el.querySelector(".userPuck");
+  if (!puck) return;
+  const h = pos && typeof pos.heading === "number" && !isNaN(pos.heading) ? pos.heading : null;
+  puck.classList.toggle("noheading", h === null);
+  if (h !== null) puck.style.setProperty("--rot", h + "deg");
 }
 
 function onPosErr(err) {
