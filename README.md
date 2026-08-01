@@ -116,21 +116,41 @@ This keeps the canonical data in OSM, keeps a human gate against poisoning,
 and keeps that gate from being a permanent bottleneck. Rationale and the
 approver's exit path are in [`docs/DIRECTION.md`](docs/DIRECTION.md).
 
+## Deploy & install
+
+The app is a static site — host `index.html` (plus `vendor/`, `icons/`,
+`manifest.webmanifest`, and `sw.js`) anywhere.
+
+- **GitHub Pages:** `.github/workflows/pages.yml` deploys on every push to
+  the default branch. One-time setup: **Settings → Pages → Source →
+  "GitHub Actions."** The workflow regenerates `demo.html` and publishes a
+  clean `_site` (no repo cruft).
+- **Install as an app:** served over HTTPS, a **service worker** precaches
+  the app shell (HTML/JS/CSS/icons) and caches map tiles as you view them, so
+  the whole app — not just the camera data — works offline. The
+  `manifest.webmanifest` makes it installable to a home screen; on iOS use
+  Share → *Add to Home Screen*.
+
+Because it enables real-time approach alerts across camera categories, the
+alerting build is intended for **web / PWA / direct install**, not the Apple
+or Google app stores (see [`docs/DIRECTION.md`](docs/DIRECTION.md)).
+
 ## Roadmap
 
-Ordered by what actually moves the needle, cheapest first:
+**Shipped:** coverage/confidence signal ("silence ≠ safety"), PWA install +
+offline app shell, screen Wake Lock, dark basemap with OSM fallback, imperial
+units, one-tap alert/audio start, and an auto-deploy to GitHub Pages.
 
-1. **Coverage / confidence UI** — make "silence ≠ safety" a first-class
-   signal, not a disclaimer. *(highest-value, lowest-cost)*
-2. **PWA hardening** — Wake Lock, installable manifest + service worker,
-   audio-first glanceable alerts, honest "keep it mounted and awake" model.
-3. **Category system** — user-selectable surveillance categories with
+Next, ordered by what moves the needle:
+
+1. **Category system** — user-selectable surveillance categories with
    independent *show-on-map* vs *alert* controls and per-category
    radius/cooldown to manage alert fatigue.
-4. **Confidence-gated alerting** — dimmed/silent until confirmed; owner
+2. **Confidence-gated alerting** — dimmed/silent until confirmed; owner
    allowlist + auto-promote-on-_N_-confirmations.
-5. **Contribute back** — tap-to-add via OSM OAuth, feeding the allowlist.
-6. **Live detection (north star)** — a passive BLE/WiFi companion sniffer to
+3. **Contribute back** — tap-to-add via OSM OAuth, feeding the allowlist.
+4. **Voice callouts** — hands-free, eyes-on-road spoken alerts (Web Speech).
+5. **Live detection (north star)** — a passive BLE/WiFi companion sniffer to
    surface cameras not yet in any database. The only true fix for coverage,
    and by far the hardest build — deliberately deferred.
 
@@ -142,4 +162,5 @@ nothing about you" user-privacy guarantee. See the direction doc.
 
 Camera data © OpenStreetMap contributors (ODbL), via the Overpass API,
 using the [DeFlock](https://deflock.me) tagging scheme. Map tiles ©
-OpenStreetMap.
+OpenStreetMap contributors & [CARTO](https://carto.com/attributions), with
+the OSM standard tiles as a fallback.

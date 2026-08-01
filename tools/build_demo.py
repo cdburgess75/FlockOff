@@ -247,6 +247,20 @@ app_anchor = '<script>\n"use strict";'
 assert app_anchor in src, "could not find the app script anchor"
 src = src.replace(app_anchor, HARNESS + "\n" + app_anchor, 1)
 
+# The demo is a throwaway page; don't let it register the real app's service
+# worker (they'd share a scope on GitHub Pages). Neutralize the registration.
+SW_REG = (
+    '/* PWA: register the service worker for offline support + installability.\n'
+    '   Skipped on file:// (service workers require http/https). */\n'
+    'if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {\n'
+    '  window.addEventListener("load", () => {\n'
+    '    navigator.serviceWorker.register("sw.js").catch(() => {});\n'
+    '  });\n'
+    '}'
+)
+assert SW_REG in src, "could not find the service-worker registration block to strip"
+src = src.replace(SW_REG, "/* service-worker registration stripped in demo build */", 1)
+
 # --- 4. Wire the demo panel controls (injected before </body>) -----------
 WIRING = r"""<script>
 /* Demo panel wiring (runs after the app has booted). */
