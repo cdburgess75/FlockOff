@@ -61,6 +61,24 @@
     flex-direction: column;
   }
 
+  /* ---------- Update banner ---------- */
+  #updateBar {
+    display: none;
+    flex: 0 0 auto;
+    align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--accent); color: var(--on-accent);
+    padding: 11px 14px; font-size: 15px; font-weight: 700;
+    z-index: 1600;
+  }
+  #updateBar.show { display: flex; }
+  #updateBar button {
+    font: inherit; font-weight: 800; cursor: pointer;
+    background: var(--on-accent); color: var(--accent);
+    border: none; border-radius: 9px; padding: 9px 16px; min-height: 44px;
+    white-space: nowrap;
+  }
+  #updateBar button:disabled { opacity: .6; cursor: default; }
+
   /* ---------- Theme selector (top bar) ---------- */
   #topBar {
     flex: 0 0 auto;
@@ -318,6 +336,11 @@
 </style>
 </head>
 <body>
+
+<div id="updateBar" role="alert">
+  <span>A new version of FlockOff is ready.</span>
+  <button id="updateBtn" type="button">Update now</button>
+</div>
 
 <div id="topBar">
   <div class="tb-title"><span class="tb-lead">Theme</span><span class="tb-name" id="tbName">Graphite</span></div>
@@ -1292,11 +1315,49 @@ initGeo();
 // Keep the data-age display live even when nothing else changes.
 setInterval(updateAgeStat, 60000);
 
-/* PWA: register the service worker for offline support + installability.
-   Skipped on file:// (service workers require http/https). */
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+/* PWA: register the service worker and surface an "Update now" banner when a
+   new version is deployed. Skipped on file:// (service workers need http/s). */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http") && !window.__DEMO__) {
+  let reloading = false, updateArmed = false;
+  // Reload only after the user asks to update (not when the first install
+  // claims the page — that would reload needlessly on the first visit).
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading || !updateArmed) return;
+    reloading = true;
+    location.reload();
+  });
+
+  function showUpdate(worker) {
+    if (!worker) return;
+    const bar = document.getElementById("updateBar");
+    const btn = document.getElementById("updateBtn");
+    bar.classList.add("show");
+    btn.onclick = () => {
+      btn.disabled = true;
+      btn.textContent = "Updating…";
+      updateArmed = true;
+      worker.postMessage({ type: "SKIP_WAITING" });
+    };
+  }
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      // A build was already waiting when the app opened.
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdate(reg.waiting);
+      // A build finished downloading while the app is open.
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) showUpdate(nw);
+        });
+      });
+      // Check for a new version now, and again whenever the app is refocused.
+      reg.update().catch(() => {});
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
+    }).catch(() => {});
   });
 }
 

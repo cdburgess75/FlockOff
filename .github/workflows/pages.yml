@@ -47,7 +47,9 @@ jobs:
           [ -z "$REV" ] && REV=0
           VER="v$(date -u +%Y.%m.%d).$(printf '%03d' "$REV")"
           echo "Build version: $VER"
-          sed -i "s/__BUILD_VERSION__/${VER}/g" _site/index.html _site/demo.html
+          # Stamp sw.js too: a changed worker is what makes the browser notice
+          # an update and offer the "Update now" banner.
+          sed -i "s/__BUILD_VERSION__/${VER}/g" _site/index.html _site/demo.html _site/sw.js
 
       - uses: actions/configure-pages@v5
         with:
