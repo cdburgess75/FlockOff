@@ -17,9 +17,9 @@
   // Apply the saved color scheme before first paint (no flash of the default).
   try {
     var __s = JSON.parse(localStorage.getItem("alprmap.settings.v1") || "{}");
-    document.documentElement.setAttribute("data-theme", __s.theme || "packet");
+    document.documentElement.setAttribute("data-theme", __s.theme || "graphite");
     if (__s.uiscale) document.documentElement.setAttribute("data-uiscale", String(__s.uiscale));
-  } catch (e) { document.documentElement.setAttribute("data-theme", "packet"); }
+  } catch (e) { document.documentElement.setAttribute("data-theme", "graphite"); }
 </script>
 <link rel="stylesheet" href="vendor/leaflet.css">
 <style>
@@ -181,8 +181,12 @@
   @keyframes bannerPulse { from { filter: brightness(1); } to { filter: brightness(1.25); } }
 
   /* ---------- Map ---------- */
-  #map { flex: 1 1 auto; min-height: 0; background: #111; }
+  #map { flex: 1 1 auto; min-height: 0; background: var(--panel-2); }
   .leaflet-container { background: var(--panel-2); }
+  /* PacketMap-style muted basemap: desaturate + warm standard OSM tiles. */
+  #map.map-muted .leaflet-tile {
+    filter: saturate(0.5) brightness(1.05) contrast(0.9) sepia(0.12) grayscale(0.12);
+  }
 
   /* ---------- Status bar ---------- */
   #statusBar {
@@ -761,7 +765,7 @@ const LS_CACHE    = "alprmap.cameras.v1";
 const LS_VIEW     = "alprmap.lastview.v1";
 const LS_UNITS_MIGRATED = "alprmap.unitsMigrated.v1";
 const LS_BASEMAP_MIGRATED = "alprmap.basemapMigrated.v1";
-const LS_LOOK_MIGRATED = "alprmap.lookMigrated.v1";
+const LS_LOOK_MIGRATED = "alprmap.lookMigrated.v2";
 
 const DEFAULTS = {
   alertRadiusM: 300,     // alert threshold (m)
@@ -775,8 +779,8 @@ const DEFAULTS = {
   muted: false,
   follow: true,
   imperial: true,        // display distances in miles/feet (US default; toggle in settings)
-  basemap: "light_all",  // selected map style — clean light map
-  theme: "packet",       // color scheme (see THEMES)
+  basemap: "osm_muted",  // selected map style — muted OSM (PacketMap-style)
+  theme: "graphite",     // color scheme (see THEMES)
   uiscale: 1,            // text size step (1..3), driven by the AA button
 };
 
@@ -802,12 +806,13 @@ try {
   }
 } catch (e) {}
 
-// New PacketMap-style look: move existing installs to the orange theme and the
-// light map once, so the redesign actually shows. Users can re-pick after.
+// PacketMap-style framework, but keep FlockOff's own colors: use the Graphite
+// scheme and the muted OSM map. This flips only the values the first look-
+// migration forced, so a deliberate later choice is left alone.
 try {
   if (!localStorage.getItem(LS_LOOK_MIGRATED)) {
-    S.theme = "packet";
-    S.basemap = "light_all";
+    if (S.theme === "packet") S.theme = "graphite";
+    if (S.basemap === "light_all") S.basemap = "osm_muted";
     saveSettings();
     localStorage.setItem(LS_LOOK_MIGRATED, "1");
   }
@@ -851,6 +856,7 @@ const CARTO_ATTR = OSM_ATTR + ' contributors, &copy; <a href="https://carto.com/
 // cached by the service worker as they're viewed, so a chosen style also
 // works offline for areas already seen.
 const BASEMAPS = {
+  osm_muted:     { label: "Muted (PacketMap)", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",                      sub: "abc",  max: 19, attr: OSM_ATTR, muted: true },
   dark_all:      { label: "Dark",         url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub: "abcd", max: 20, attr: CARTO_ATTR },
   dark_nolabels: { label: "Dark · minimal", url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",     sub: "abcd", max: 20, attr: CARTO_ATTR },
   voyager:       { label: "Colorful",     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub: "abcd", max: 20, attr: CARTO_ATTR },
@@ -863,14 +869,17 @@ const BASEMAPS = {
 // Swap the active basemap. If the chosen style can't be reached, fall back to
 // OSM standard tiles so the map still renders.
 function setBasemap(key) {
-  const b = BASEMAPS[key] || BASEMAPS.dark_all;
+  const b = BASEMAPS[key] || BASEMAPS.osm_muted;
   if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
   const opts = { maxZoom: b.max, attribution: b.attr };
   if (b.sub) opts.subdomains = b.sub;
   baseLayer = L.tileLayer(b.url, opts).addTo(map);
   baseLayer.bringToBack();
+  // PacketMap-style muted look: a CSS filter over standard OSM tiles.
+  const mapEl = document.getElementById("map");
+  if (mapEl) mapEl.classList.toggle("map-muted", !!b.muted);
 
-  if (key !== "osm") {
+  if (key !== "osm" && key !== "osm_muted") {
     let errs = 0, fellBack = false;
     baseLayer.on("tileerror", () => {
       if (fellBack || ++errs < 4) return;     // tolerate transient errors
