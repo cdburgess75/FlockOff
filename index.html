@@ -12,19 +12,43 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FlockOff">
+<script>
+  // Apply the saved color scheme before first paint (no flash of the default).
+  try {
+    var __s = JSON.parse(localStorage.getItem("alprmap.settings.v1") || "{}");
+    document.documentElement.setAttribute("data-theme", __s.theme || "graphite");
+  } catch (e) { document.documentElement.setAttribute("data-theme", "graphite"); }
+</script>
 <link rel="stylesheet" href="vendor/leaflet.css">
 <style>
   :root {
-    --bg: #0d1117;
-    --panel: #161b22;
-    --panel-2: #1c2330;
-    --border: #30363d;
-    --text: #e6edf3;
-    --muted: #8b949e;
-    --accent: #58a6ff;
-    --amber: #d29922;
-    --red: #f85149;
-    --green: #3fb950;
+    /* Graphite — the default color scheme (switch with the Theme selector). */
+    --bg: #0c1116;
+    --panel: #161d26;
+    --panel-2: #1f2937;
+    --border: #33404f;
+    --text: #f3f7fb;
+    --muted: #aebacb;
+    --accent: #5b93ff;
+    --on-accent: #04101f;
+    --amber: #f6a723;
+    --red: #ff5b52;
+    --green: #37c871;
+  }
+  :root[data-theme="daylight"] {
+    --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6fa; --border: #cdd7e2;
+    --text: #101827; --muted: #55637a; --accent: #1b6ef3; --on-accent: #ffffff;
+    --amber: #a85708; --red: #c81f2c; --green: #15803d;
+  }
+  :root[data-theme="highvis"] {
+    --bg: #000000; --panel: #0e0e0e; --panel-2: #1b1b1b; --border: #5a5a5a;
+    --text: #ffffff; --muted: #dcdcdc; --accent: #ffce1a; --on-accent: #000000;
+    --amber: #ff9500; --red: #ff3b30; --green: #34d95b;
+  }
+  :root[data-theme="harbor"] {
+    --bg: #081722; --panel: #0f2532; --panel-2: #163444; --border: #285067;
+    --text: #e9f3f8; --muted: #a2bece; --accent: #2bc0d6; --on-accent: #032027;
+    --amber: #f2b03a; --red: #ff6a63; --green: #2fd39a;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
@@ -35,6 +59,35 @@
     display: flex;
     flex-direction: column;
   }
+
+  /* ---------- Theme selector (top bar) ---------- */
+  #topBar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    z-index: 1000;
+  }
+  #topBar .tb-title { display: flex; flex-direction: column; line-height: 1.15; }
+  #topBar .tb-lead { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  #topBar .tb-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .tb-swatches { display: flex; gap: 8px; }
+  .tb-swatch {
+    width: 42px; height: 34px; border-radius: 8px; padding: 0; cursor: pointer;
+    border: 2px solid var(--border);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  }
+  .tb-swatch.active { border-color: var(--text); box-shadow: 0 0 0 3px var(--accent); }
+  .tb-swatch:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* High-Visibility runs a touch larger and heavier for readability. */
+  :root[data-theme="highvis"] #alertBanner { font-size: 18px; }
+  :root[data-theme="highvis"] #statusBar { font-size: 14px; }
+  :root[data-theme="highvis"] #coverageNote { font-size: 13px; }
+  :root[data-theme="highvis"] .btn { font-size: 15px; }
+  :root[data-theme="highvis"] #statusBar,
+  :root[data-theme="highvis"] #coverageNote { border-top-width: 2px; }
 
   /* ---------- Alert banner ---------- */
   #alertBanner {
@@ -53,7 +106,7 @@
 
   /* ---------- Map ---------- */
   #map { flex: 1 1 auto; min-height: 0; background: #111; }
-  .leaflet-container { background: #1a1a1a; }
+  .leaflet-container { background: var(--panel-2); }
 
   /* ---------- Status bar ---------- */
   #statusBar {
@@ -110,7 +163,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.5);
     user-select: none;
   }
-  .fab.active { background: var(--accent); border-color: var(--accent); color: #04121f; }
+  .fab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .fab.muted-on { background: var(--red); border-color: var(--red); color: #fff; }
 
   /* ---------- Drawer (settings / about) ---------- */
@@ -163,7 +216,7 @@
     cursor: pointer;
   }
   .btn:active { filter: brightness(1.3); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #04121f; font-weight: 600; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   .btn.danger  { color: var(--red); border-color: var(--red); }
   #drawerClose {
     position: absolute; top: 10px; right: 12px;
@@ -264,6 +317,16 @@
 </style>
 </head>
 <body>
+
+<div id="topBar">
+  <div class="tb-title"><span class="tb-lead">Theme</span><span class="tb-name" id="tbName">Graphite</span></div>
+  <div class="tb-swatches" role="group" aria-label="Color scheme">
+    <button class="tb-swatch" data-key="graphite" title="Graphite" aria-label="Graphite" style="background:linear-gradient(135deg,#0c1116 0 50%,#5b93ff 50% 100%)"></button>
+    <button class="tb-swatch" data-key="daylight" title="Daylight" aria-label="Daylight" style="background:linear-gradient(135deg,#eef1f5 0 50%,#1b6ef3 50% 100%)"></button>
+    <button class="tb-swatch" data-key="highvis" title="High-Visibility" aria-label="High-Visibility" style="background:linear-gradient(135deg,#000000 0 50%,#ffce1a 50% 100%)"></button>
+    <button class="tb-swatch" data-key="harbor" title="Harbor" aria-label="Harbor" style="background:linear-gradient(135deg,#081722 0 50%,#2bc0d6 50% 100%)"></button>
+  </div>
+</div>
 
 <div id="alertBanner" role="alert"></div>
 
@@ -402,6 +465,7 @@ const DEFAULTS = {
   follow: true,
   imperial: true,        // display distances in miles/feet (US default; toggle in settings)
   basemap: "voyager",    // selected map style — Voyager: clear, readable streets
+  theme: "graphite",     // color scheme (see THEMES / the Theme selector)
 };
 
 let S = loadSettings();
@@ -1048,6 +1112,23 @@ function setFollow(on) {
   if (on && pos) map.panTo([pos.lat, pos.lon]);
 }
 
+const THEMES = { graphite: "Graphite", daylight: "Daylight", highvis: "High-Visibility", harbor: "Harbor" };
+function setTheme(key) {
+  if (!THEMES[key]) key = "graphite";
+  S.theme = key;
+  saveSettings();
+  document.documentElement.setAttribute("data-theme", key);
+  // Match the browser UI (status bar / address bar) to the scheme.
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && bg) meta.setAttribute("content", bg);
+  const nameEl = document.getElementById("tbName");
+  if (nameEl) nameEl.textContent = THEMES[key];
+  document.querySelectorAll(".tb-swatch").forEach(function (b) {
+    b.classList.toggle("active", b.dataset.key === key);
+  });
+}
+
 function setMuted(on) {
   S.muted = on;
   saveSettings();
@@ -1116,6 +1197,12 @@ function bindUI() {
       .join("");
     basemapSelect.onchange = () => { S.basemap = basemapSelect.value; saveSettings(); setBasemap(S.basemap); };
   }
+
+  // Theme selector (top bar): tap a swatch to recolor the whole app.
+  document.querySelectorAll(".tb-swatch").forEach(function (b) {
+    b.onclick = function () { setTheme(b.dataset.key); };
+  });
+  setTheme(S.theme);
 
   // Units toggle re-renders every distance currently on screen.
   const imperialInput = document.getElementById("chImperial");

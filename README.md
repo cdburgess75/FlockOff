@@ -139,7 +139,9 @@ or Google app stores (see [`docs/DIRECTION.md`](docs/DIRECTION.md)).
 
 ## Roadmap
 
-**Shipped:** coverage/confidence signal ("silence ≠ safety"), PWA install +
+**Shipped:** four switchable **color themes** (Graphite / Daylight /
+High-Visibility / Harbor) in a top selector, coverage/confidence signal
+("silence ≠ safety"), PWA install +
 offline app shell, screen Wake Lock, **switchable map styles** (dark /
 minimal / colorful / light / satellite / OSM, in the settings drawer) with
 OSM fallback, imperial units, one-tap alert/audio start, hands-free **voice
