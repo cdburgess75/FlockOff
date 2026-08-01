@@ -34,7 +34,8 @@ holds a screen Wake Lock so the app doesn't sleep in a mount. Grant location
 access and drive. Camera data and settings are cached in `localStorage`, and
 Leaflet is bundled under `vendor/`, so after the first successful load the
 app keeps working fully offline (freshness is always shown in the status
-bar). Distances can be shown in miles/feet or km/m — see the settings drawer.
+bar). Distances default to **miles/feet** (US); switch to km/m in the
+settings drawer.
 
 Because it runs in the browser, treat it as a **foreground, screen-on**
 tool: mounted and awake, not asleep in your pocket. Hardening this
