@@ -91,6 +91,7 @@
   #topBar .tb-title { display: flex; flex-direction: column; line-height: 1.15; }
   #topBar .tb-lead { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
   #topBar .tb-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  #topBar .tb-ver { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .tb-swatches { display: flex; gap: 8px; }
   .tb-swatch {
     width: 42px; height: 34px; border-radius: 8px; padding: 0; cursor: pointer;
@@ -343,7 +344,7 @@
 </div>
 
 <div id="topBar">
-  <div class="tb-title"><span class="tb-lead">Theme</span><span class="tb-name" id="tbName">Graphite</span></div>
+  <div class="tb-title"><span class="tb-lead">Theme</span><span class="tb-name" id="tbName">Graphite</span><span class="tb-ver" id="tbVer">dev</span></div>
   <div class="tb-swatches" role="group" aria-label="Color scheme">
     <button class="tb-swatch" data-key="graphite" title="Graphite" aria-label="Graphite" style="background:linear-gradient(135deg,#0c1116 0 50%,#5b93ff 50% 100%)"></button>
     <button class="tb-swatch" data-key="daylight" title="Daylight" aria-label="Daylight" style="background:linear-gradient(135deg,#eef1f5 0 50%,#1b6ef3 50% 100%)"></button>
@@ -1367,8 +1368,10 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http") && !win
   const m = document.querySelector('meta[name="app-version"]');
   let v = m ? (m.getAttribute("content") || "") : "";
   if (!v || v.indexOf("__") === 0) v = "dev";
-  const el = document.getElementById("appVersion");
-  if (el) el.textContent = v;
+  ["appVersion", "tbVer"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v;
+  });
 })();
 </script>
 </body>
