@@ -61,6 +61,26 @@
     --text: #e9f3f8; --muted: #a2bece; --accent: #2bc0d6; --on-accent: #032027;
     --amber: #f2b03a; --red: #ff6a63; --green: #2fd39a;
   }
+  :root[data-theme="terminal"] {
+    --bg:#04070a; --panel:#0a1410; --panel-2:#0f2018; --border:#1f3a2c;
+    --text:#d6f5e2; --muted:#6fae8c; --accent:#35e07f; --on-accent:#04140b;
+    --amber:#f5c518; --red:#ff5b52; --green:#35e07f;
+  }
+  :root[data-theme="amber"] {
+    --bg:#0a0700; --panel:#161005; --panel-2:#20180a; --border:#3d2f12;
+    --text:#ffe9c2; --muted:#c99a5a; --accent:#ffb02e; --on-accent:#180f00;
+    --amber:#ffb02e; --red:#ff6a4d; --green:#7fd66a;
+  }
+  :root[data-theme="crimson"] {
+    --bg:#0c0708; --panel:#170d0f; --panel-2:#221316; --border:#3d2126;
+    --text:#f5e6e8; --muted:#c08e95; --accent:#ff4d5e; --on-accent:#1a0508;
+    --amber:#f5a623; --red:#ff4d5e; --green:#37c871;
+  }
+  :root[data-theme="violet"] {
+    --bg:#0a0814; --panel:#141126; --panel-2:#1d1836; --border:#332b57;
+    --text:#ece9f7; --muted:#a99fce; --accent:#a78bfa; --on-accent:#0d0820;
+    --amber:#f5a623; --red:#ff5b6e; --green:#42d19a;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
   body {
@@ -180,12 +200,56 @@
   #alertBanner.show { display: block; }
   @keyframes bannerPulse { from { filter: brightness(1); } to { filter: brightness(1.25); } }
 
+  /* ---------- Views (map / nearby) ---------- */
+  #views { flex: 1 1 auto; min-height: 0; position: relative; }
+  .view { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .view.on { display: flex; }
+  #viewNearby { background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .nearby-head {
+    position: sticky; top: 0; z-index: 1; background: var(--bg);
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    color: var(--muted); font-size: calc(11.5px * var(--ui-scale));
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  .nearby-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 13px 14px; border-bottom: 1px solid var(--border); cursor: pointer;
+    font-size: calc(13px * var(--ui-scale));
+  }
+  .nearby-item:active { background: var(--panel-2); }
+  .nearby-item .op { color: var(--text); font-weight: 700; }
+  .nearby-item .meta { color: var(--muted); font-size: calc(11.5px * var(--ui-scale)); text-transform: uppercase; letter-spacing: .04em; }
+  .nearby-item .dist { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .nearby-empty { padding: 26px 18px; text-align: center; color: var(--muted); line-height: 1.55; font-size: calc(13px * var(--ui-scale)); }
+
+  /* ---------- Bottom tab bar ---------- */
+  #tabBar {
+    flex: 0 0 auto; display: flex;
+    background: var(--panel); border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom); z-index: 1000;
+  }
+  #tabBar .tab {
+    flex: 1; background: none; border: none; cursor: pointer; color: var(--muted);
+    font-family: var(--mono); display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 4px 9px; font-size: calc(10.5px * var(--ui-scale));
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  #tabBar .tab .ti { font-size: calc(19px * var(--ui-scale)); line-height: 1; }
+  #tabBar .tab.on { color: var(--accent); }
+  #tabBar .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+  .hd-status.sub { font-size: calc(11px * var(--ui-scale)); }
+
   /* ---------- Map ---------- */
   #map { flex: 1 1 auto; min-height: 0; background: var(--panel-2); }
   .leaflet-container { background: var(--panel-2); }
-  /* PacketMap-style muted basemap: desaturate + warm standard OSM tiles. */
+  /* Muted basemap — PacketMap's exact tile filter (dark chrome darkens/mutes
+     the standard OSM tiles; the one light theme keeps them near-normal). */
   #map.map-muted .leaflet-tile {
-    filter: saturate(0.5) brightness(1.05) contrast(0.9) sepia(0.12) grayscale(0.12);
+    filter: brightness(.75) contrast(1.1) saturate(.65) hue-rotate(10deg);
+  }
+  :root[data-theme="daylight"] #map.map-muted .leaflet-tile {
+    filter: saturate(1.08) contrast(1.03);
   }
 
   /* ---------- Status bar ---------- */
@@ -227,7 +291,7 @@
   .fabs {
     position: absolute;
     right: 10px;
-    bottom: 10px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -460,23 +524,35 @@
     <span class="dot"></span>
     <span class="stat" id="stGps">GPS <b>waiting…</b></span>
     <span class="stat" id="stNearest">Nearest <b>–</b></span>
+    <span class="stat" id="stCams">Cameras <b>–</b></span>
+  </div>
+  <div class="hd-status sub">
+    <span class="stat" id="stAge">Data <b>none</b></span>
+    <span class="stat" id="stCoverage">Coverage <b>–</b></span>
   </div>
 </div>
 
 <div id="alertBanner" role="alert"></div>
 
-<div id="map"></div>
+<main id="views">
+  <section class="view on" id="viewMap">
+    <div id="map"></div>
+    <div id="coverageNote">
+      ⚠ Quiet ≠ clear — camera data is crowdsourced and incomplete. No alert does
+      not mean no camera; unmapped and mobile units won't appear here.
+    </div>
+  </section>
+  <section class="view" id="viewNearby">
+    <div class="nearby-head">Nearby cameras · nearest first</div>
+    <div id="nearbyList"></div>
+  </section>
+</main>
 
-<div id="coverageNote">
-  ⚠ Quiet ≠ clear — camera data is crowdsourced and incomplete. No alert does
-  not mean no camera; unmapped and mobile units won't appear here.
-</div>
-
-<div id="statusBar">
-  <span class="stat" id="stCams">Cameras <b>–</b></span>
-  <span class="stat" id="stAge">Data <b>none</b></span>
-  <span class="stat" id="stCoverage">Coverage <b>–</b></span>
-</div>
+<nav id="tabBar" role="tablist">
+  <button class="tab on" id="tabMap" type="button" data-view="map"><span class="ti">⌖</span><span class="tl">Map</span></button>
+  <button class="tab" id="tabNearby" type="button" data-view="nearby"><span class="ti">≣</span><span class="tl">Nearby</span></button>
+  <button class="tab" id="tabSetup" type="button" data-view="setup"><span class="ti">⚙</span><span class="tl">Setup</span></button>
+</nav>
 
 <div class="fabs">
   <button class="fab" id="fabMute" title="Mute alerts">🔔</button>
@@ -519,6 +595,10 @@
       <button class="tb-swatch" data-key="daylight" title="Daylight" aria-label="Daylight" style="background:linear-gradient(135deg,#eef1f5 0 50%,#1b6ef3 50% 100%)"></button>
       <button class="tb-swatch" data-key="highvis" title="High-Visibility" aria-label="High-Visibility" style="background:linear-gradient(135deg,#000000 0 50%,#ffce1a 50% 100%)"></button>
       <button class="tb-swatch" data-key="harbor" title="Harbor" aria-label="Harbor" style="background:linear-gradient(135deg,#081722 0 50%,#2bc0d6 50% 100%)"></button>
+      <button class="tb-swatch" data-key="terminal" title="Terminal" aria-label="Terminal" style="background:linear-gradient(135deg,#04070a 0 50%,#35e07f 50% 100%)"></button>
+      <button class="tb-swatch" data-key="amber" title="Amber" aria-label="Amber" style="background:linear-gradient(135deg,#0a0700 0 50%,#ffb02e 50% 100%)"></button>
+      <button class="tb-swatch" data-key="crimson" title="Crimson" aria-label="Crimson" style="background:linear-gradient(135deg,#0c0708 0 50%,#ff4d5e 50% 100%)"></button>
+      <button class="tb-swatch" data-key="violet" title="Violet" aria-label="Violet" style="background:linear-gradient(135deg,#0a0814 0 50%,#a78bfa 50% 100%)"></button>
     </div>
   </div>
   <div class="setting">
@@ -1445,8 +1525,8 @@ function setFollow(on) {
   if (on && pos) map.panTo([pos.lat, pos.lon]);
 }
 
-const THEMES = { packet: "PacketMap", graphite: "Graphite", daylight: "Daylight", highvis: "High-Visibility", harbor: "Harbor" };
-const THEME_ORDER = ["packet", "graphite", "daylight", "highvis", "harbor"];
+const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", daylight: "Daylight", highvis: "High-Visibility" };
+const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "daylight", "highvis"];
 function setTheme(key) {
   if (!THEMES[key]) key = "packet";
   S.theme = key;
@@ -1480,6 +1560,60 @@ function cycleTextSize() {
   toast("Text size: " + ({1: "Normal", 2: "Large", 3: "Largest"}[S.uiscale]));
 }
 
+/* ---------- Views / bottom tab bar ---------- */
+let currentView = "map";
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (ch) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+  });
+}
+function renderNearby() {
+  const list = document.getElementById("nearbyList");
+  if (!list) return;
+  const from = pos || (map ? { lat: map.getCenter().lat, lon: map.getCenter().lng } : null);
+  if (!from || !cameras.length) {
+    list.innerHTML = '<div class="nearby-empty">No cameras loaded for this area yet.<br>' +
+      'Remember: an empty list doesn\'t mean no cameras — the data is crowdsourced and incomplete.</div>';
+    return;
+  }
+  const items = cameras.map(function (c) { return { c: c, d: haversine(from.lat, from.lon, c.lat, c.lon) }; })
+    .sort(function (a, b) { return a.d - b.d; }).slice(0, 60);
+  list.innerHTML = items.map(function (it) {
+    const c = it.c;
+    const op = c.operator ? escHtml(c.operator) : "ALPR camera";
+    const bits = [];
+    if (c.brand) bits.push(escHtml(c.brand));
+    if (c.direction != null) bits.push("Faces " + compass(c.direction));
+    return '<div class="nearby-item" data-lat="' + c.lat + '" data-lon="' + c.lon + '">' +
+      '<span><span class="op">' + op + '</span><br><span class="meta">' + bits.join(" · ") + '</span></span>' +
+      '<span class="dist">' + fmtDist(it.d) + '</span></div>';
+  }).join("");
+  list.querySelectorAll(".nearby-item").forEach(function (el) {
+    el.onclick = function () {
+      setView("map");
+      map.setView([+el.dataset.lat, +el.dataset.lon], Math.max(map.getZoom(), 16));
+    };
+  });
+}
+function setView(name) {
+  if (name === "setup") {
+    document.getElementById("drawer").classList.add("open");
+    document.getElementById("tabSetup").classList.add("on");
+    return;
+  }
+  currentView = name;
+  const onMap = name === "map";
+  document.getElementById("viewMap").classList.toggle("on", onMap);
+  document.getElementById("viewNearby").classList.toggle("on", !onMap);
+  document.getElementById("tabMap").classList.toggle("on", onMap);
+  document.getElementById("tabNearby").classList.toggle("on", !onMap);
+  document.getElementById("tabSetup").classList.remove("on");
+  const fabs = document.querySelector(".fabs");
+  if (fabs) fabs.style.display = onMap ? "" : "none";
+  if (onMap && map) setTimeout(function () { map.invalidateSize(); }, 40);
+  if (!onMap) renderNearby();
+}
+
 function setMuted(on) {
   S.muted = on;
   saveSettings();
@@ -1498,8 +1632,16 @@ function bindUI() {
   };
   document.getElementById("fabSettings").onclick = () =>
     document.getElementById("drawer").classList.add("open");
-  document.getElementById("drawerClose").onclick = () =>
+  document.getElementById("drawerClose").onclick = () => {
     document.getElementById("drawer").classList.remove("open");
+    document.getElementById("tabSetup").classList.remove("on");
+    document.getElementById(currentView === "nearby" ? "tabNearby" : "tabMap").classList.add("on");
+  };
+
+  // Bottom tab bar
+  document.getElementById("tabMap").onclick = () => setView("map");
+  document.getElementById("tabNearby").onclick = () => setView("nearby");
+  document.getElementById("tabSetup").onclick = () => setView("setup");
 
   // Sliders
   const bindSlider = (id, valId, key, fmt, onChange) => {
