@@ -27,6 +27,20 @@ offline (data age is always shown in the status bar).
   red = inside it. Tap one for operator, brand, facing direction, and
   report date.
 
+## Try the demo (no driving required)
+
+Open `demo.html` in a browser to watch the app work without a phone, GPS, or
+network. It runs the **real application code unchanged** but feeds it a
+simulated car driving a downtown route past mock ALPR cameras, so you can see
+the proximity alerts, banner, marker colors (grey → amber → red), and status
+bar react in real time. Play/pause, restart, and a speed control are in the
+panel. Leaflet is vendored under `vendor/` so the demo is fully self-contained
+and works offline.
+
+`demo.html` is generated from `index.html` by `tools/build_demo.py` — the app
+itself stays the single source of truth; the script only prepends a harness
+that overrides geolocation and the Overpass fetch.
+
 ## Honest limitations
 
 - The dataset is **crowdsourced and incomplete** — an empty area does not
