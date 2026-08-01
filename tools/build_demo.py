@@ -108,6 +108,9 @@ HARNESS = r"""<script>
 (function () {
   "use strict";
 
+  // Mark this as the demo so the app skips service-worker registration.
+  window.__DEMO__ = true;
+
   // Start every demo from a clean, known state.
   try {
     localStorage.removeItem("alprmap.cameras.v1");
@@ -246,20 +249,9 @@ HARNESS = r"""<script>
 app_anchor = '<script>\n"use strict";'
 assert app_anchor in src, "could not find the app script anchor"
 src = src.replace(app_anchor, HARNESS + "\n" + app_anchor, 1)
-
-# The demo is a throwaway page; don't let it register the real app's service
-# worker (they'd share a scope on GitHub Pages). Neutralize the registration.
-SW_REG = (
-    '/* PWA: register the service worker for offline support + installability.\n'
-    '   Skipped on file:// (service workers require http/https). */\n'
-    'if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {\n'
-    '  window.addEventListener("load", () => {\n'
-    '    navigator.serviceWorker.register("sw.js").catch(() => {});\n'
-    '  });\n'
-    '}'
-)
-assert SW_REG in src, "could not find the service-worker registration block to strip"
-src = src.replace(SW_REG, "/* service-worker registration stripped in demo build */", 1)
+# Note: the harness sets window.__DEMO__ = true, and the app gates service-
+# worker registration on !window.__DEMO__, so the throwaway demo page never
+# registers the real app's worker.
 
 # --- 4. Wire the demo panel controls (injected before </body>) -----------
 WIRING = r"""<script>
