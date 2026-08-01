@@ -142,6 +142,15 @@
   .setting .val { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
   .setting input[type=range] { width: 100%; margin-top: 8px; accent-color: var(--accent); }
   .setting input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); flex: 0 0 auto; }
+  .setting select.styleSelect {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 14px;
+    accent-color: var(--accent);
+  }
   .btnRow { display: flex; gap: 8px; margin-top: 10px; }
   .btn {
     flex: 1;
@@ -297,6 +306,9 @@
 
   <h3>Display</h3>
   <div class="setting">
+    <label>Map style <select id="basemapSelect" class="styleSelect"></select></label>
+  </div>
+  <div class="setting">
     <label>Use miles / feet <input type="checkbox" id="chImperial"></label>
   </div>
 
@@ -329,7 +341,7 @@
     device GPS. It transmits nothing to any camera and does not interfere
     with any signal or system.</p>
     <p class="muted">Data © OpenStreetMap contributors (ODbL), via the
-    Overpass API. Map tiles © OpenStreetMap &amp; CARTO.</p>
+    Overpass API. Map tiles © OpenStreetMap, CARTO &amp; Esri.</p>
   </div>
 </div>
 
@@ -377,6 +389,7 @@ const DEFAULTS = {
   muted: false,
   follow: true,
   imperial: false,       // display distances in miles/feet instead of km/m
+  basemap: "dark_all",   // selected map style (see BASEMAPS)
 };
 
 let S = loadSettings();
@@ -396,7 +409,7 @@ const OVERPASS_ENDPOINTS = [
 /* ============================================================
    State
    ============================================================ */
-let map, userMarker, accCircle;
+let map, userMarker, accCircle, baseLayer;
 let cameras = [];            // normalized camera objects
 let camMarkers = new Map();  // id -> L.CircleMarker
 let cache = loadCache();     // { cameras, fetchedAt, center:{lat,lon}, radiusM }
@@ -411,6 +424,44 @@ const HYSTERESIS = 1.2;                   // must exit radius*1.2 to re-arm
 /* ============================================================
    Map setup
    ============================================================ */
+const OSM_ATTR   = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const CARTO_ATTR = OSM_ATTR + ' contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+// Keyless basemap styles the user can switch between. Cross-origin tiles are
+// cached by the service worker as they're viewed, so a chosen style also
+// works offline for areas already seen.
+const BASEMAPS = {
+  dark_all:      { label: "Dark",         url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub: "abcd", max: 20, attr: CARTO_ATTR },
+  dark_nolabels: { label: "Dark · minimal", url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",     sub: "abcd", max: 20, attr: CARTO_ATTR },
+  voyager:       { label: "Colorful",     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub: "abcd", max: 20, attr: CARTO_ATTR },
+  light_all:     { label: "Light",        url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",           sub: "abcd", max: 20, attr: CARTO_ATTR },
+  satellite:     { label: "Satellite",    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub: "", max: 19, attr: 'Imagery &copy; <a href="https://www.esri.com">Esri</a>' },
+  osm:           { label: "OSM Standard", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",                           sub: "abc",  max: 19, attr: OSM_ATTR },
+};
+
+// Swap the active basemap. If the chosen style can't be reached, fall back to
+// OSM standard tiles so the map still renders.
+function setBasemap(key) {
+  const b = BASEMAPS[key] || BASEMAPS.dark_all;
+  if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
+  const opts = { maxZoom: b.max, attribution: b.attr };
+  if (b.sub) opts.subdomains = b.sub;
+  baseLayer = L.tileLayer(b.url, opts).addTo(map);
+  baseLayer.bringToBack();
+
+  if (key !== "osm") {
+    let errs = 0, fellBack = false;
+    baseLayer.on("tileerror", () => {
+      if (fellBack || ++errs < 4) return;     // tolerate transient errors
+      fellBack = true;
+      map.removeLayer(baseLayer);
+      const o = BASEMAPS.osm;
+      baseLayer = L.tileLayer(o.url, { subdomains: o.sub, maxZoom: o.max, attribution: o.attr }).addTo(map);
+      baseLayer.bringToBack();
+    });
+  }
+}
+
 function initMap() {
   let view = { lat: 39.5, lon: -98.35, zoom: 4 };  // continental US fallback
   try {
@@ -423,25 +474,7 @@ function initMap() {
 
   map = L.map("map", { zoomControl: true }).setView([view.lat, view.lon], view.zoom);
 
-  // Dark basemap (CARTO) to match the app's UI; keyless, and gentler on the
-  // OSM tile servers than hotlinking them directly. If it can't be reached we
-  // fall back to the OSM standard tiles so the map still renders.
-  const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-  let baseLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    subdomains: "abcd",
-    maxZoom: 20,
-    attribution: OSM_ATTR + ' contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  }).addTo(map);
-
-  let tileErrors = 0, tilesSwitched = false;
-  baseLayer.on("tileerror", () => {
-    if (tilesSwitched || ++tileErrors < 4) return;   // tolerate transient errors
-    tilesSwitched = true;
-    map.removeLayer(baseLayer);
-    baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: OSM_ATTR,
-    }).addTo(map);
-  });
+  setBasemap(S.basemap);
 
   map.on("moveend", () => {
     const c = map.getCenter();
@@ -1022,6 +1055,15 @@ function bindUI() {
       saveSettings();
       if (S.chVoice) speak("Voice callouts on");
     };
+  }
+
+  // Map style picker: populate from BASEMAPS and swap the tiles live.
+  const basemapSelect = document.getElementById("basemapSelect");
+  if (basemapSelect) {
+    basemapSelect.innerHTML = Object.keys(BASEMAPS)
+      .map(k => '<option value="' + k + '"' + (k === S.basemap ? " selected" : "") + '>' + BASEMAPS[k].label + '</option>')
+      .join("");
+    basemapSelect.onchange = () => { S.basemap = basemapSelect.value; saveSettings(); setBasemap(S.basemap); };
   }
 
   // Units toggle re-renders every distance currently on screen.

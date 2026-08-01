@@ -139,9 +139,10 @@ or Google app stores (see [`docs/DIRECTION.md`](docs/DIRECTION.md)).
 ## Roadmap
 
 **Shipped:** coverage/confidence signal ("silence ≠ safety"), PWA install +
-offline app shell, screen Wake Lock, dark basemap with OSM fallback, imperial
-units, one-tap alert/audio start, hands-free **voice callouts**, and an
-auto-deploy to GitHub Pages.
+offline app shell, screen Wake Lock, **switchable map styles** (dark /
+minimal / colorful / light / satellite / OSM, in the settings drawer) with
+OSM fallback, imperial units, one-tap alert/audio start, hands-free **voice
+callouts**, and an auto-deploy to GitHub Pages.
 
 Next, ordered by what moves the needle:
 
