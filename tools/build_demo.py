@@ -252,6 +252,11 @@ WIRING = r"""<script>
 /* Demo panel wiring (runs after the app has booted). */
 (function () {
   "use strict";
+  // The live demo auto-runs, so dismiss the start gate for the viewer
+  // (also unlocks audio + attempts the wake lock, exercising that path).
+  var sg = document.getElementById("startGate");
+  if (sg) { var bs = document.getElementById("btnStart"); if (bs) bs.click(); else sg.classList.remove("show"); }
+
   var play = document.getElementById("demoPlay");
   var speedBtns = { 1: document.getElementById("demoS1"), 2: document.getElementById("demoS2"), 4: document.getElementById("demoS4") };
 

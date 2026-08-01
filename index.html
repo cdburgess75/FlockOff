@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0d1117">
 <title>ALPR Proximity Map</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="vendor/leaflet.css">
 <style>
   :root {
     --bg: #0d1117;
@@ -180,6 +179,28 @@
   #emptyState h2 { font-size: 17px; margin-bottom: 10px; }
   #emptyState p { font-size: 14px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
 
+  /* ---------- Start gate (audio unlock + screen wake lock) ---------- */
+  #startGate {
+    position: absolute; inset: 0;
+    z-index: 1400;
+    background: rgba(13,17,23,.94);
+    display: none;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 24px;
+  }
+  #startGate.show { display: flex; }
+  #startGate .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 340px;
+  }
+  #startGate h2 { font-size: 18px; margin-bottom: 10px; }
+  #startGate p { font-size: 14px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  #startGate .btn.primary { font-size: 15px; padding: 12px; }
+
   /* ---------- Toast ---------- */
   #toast {
     position: absolute;
@@ -264,6 +285,11 @@
     <label>Vibration <input type="checkbox" id="chHaptic" checked></label>
   </div>
 
+  <h3>Display</h3>
+  <div class="setting">
+    <label>Use miles / feet <input type="checkbox" id="chImperial"></label>
+  </div>
+
   <h3>Data</h3>
   <div class="setting">
     <label>Fetch radius <span class="val" id="fetchRadiusVal"></span></label>
@@ -306,10 +332,19 @@
   </div>
 </div>
 
+<div id="startGate">
+  <div class="card">
+    <h2>Ready to drive?</h2>
+    <p>Tap to turn on alert sounds and keep your screen awake while you drive.
+    Remember: no alert doesn't mean no camera — the data is crowdsourced and
+    incomplete.</p>
+    <button class="btn primary" id="btnStart">Enable alerts &amp; keep screen on</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="vendor/leaflet.js"></script>
 <script>
 "use strict";
 
@@ -330,6 +365,7 @@ const DEFAULTS = {
   chHaptic: true,
   muted: false,
   follow: true,
+  imperial: false,       // display distances in miles/feet instead of km/m
 };
 
 let S = loadSettings();
@@ -437,7 +473,7 @@ function onPos(p) {
   if (S.follow) map.panTo(ll, { animate: true, duration: 0.5 });
 
   const q = pos.accuracy <= 20 ? "good" : pos.accuracy <= 60 ? "" : "warn";
-  setStat("stGps", "±" + Math.round(pos.accuracy) + " m", q);
+  setStat("stGps", fmtAccuracy(pos.accuracy), q);
 
   ensureData(pos.lat, pos.lon);
   checkProximity();
@@ -758,7 +794,37 @@ function setStat(id, text, cls) {
 }
 
 function fmtDist(m) {
+  if (S.imperial) {
+    const ft = m * 3.28084;
+    return ft < 1000 ? Math.round(ft / 10) * 10 + " ft" : (m / 1609.344).toFixed(1) + " mi";
+  }
   return m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(1) + " km";
+}
+
+function fmtAccuracy(m) {
+  return S.imperial ? "±" + Math.round(m * 3.28084) + " ft" : "±" + Math.round(m) + " m";
+}
+
+// Slider value labels. The sliders store metric internally (m / km); only the
+// displayed label switches with the units preference.
+function fmtRadiusLabel(m)  { return S.imperial ? Math.round(m * 3.28084) + " ft" : m + " m"; }
+function fmtFetchLabel(km)  {
+  if (!S.imperial) return km + " km";
+  const mi = km / 1.609344;
+  return (mi < 10 ? mi.toFixed(1) : Math.round(mi)) + " mi";
+}
+
+// Re-render everything whose text depends on the units preference.
+function refreshUnits() {
+  const ar = document.getElementById("alertRadiusVal");
+  const fr = document.getElementById("fetchRadiusVal");
+  if (ar) ar.textContent = fmtRadiusLabel(S.alertRadiusM);
+  if (fr) fr.textContent = fmtFetchLabel(S.fetchRadiusKm);
+  if (pos) {
+    const q = pos.accuracy <= 20 ? "good" : pos.accuracy <= 60 ? "" : "warn";
+    setStat("stGps", fmtAccuracy(pos.accuracy), q);
+  }
+  checkProximity();  // refreshes nearest-distance stat + banner
 }
 
 function fmtAge(ms) {
@@ -866,8 +932,8 @@ function bindUI() {
       if (onChange) onChange();
     };
   };
-  bindSlider("alertRadius", "alertRadiusVal", "alertRadiusM", v => v + " m", () => { checkProximity(); });
-  bindSlider("fetchRadius", "fetchRadiusVal", "fetchRadiusKm", v => v + " km");
+  bindSlider("alertRadius", "alertRadiusVal", "alertRadiusM", fmtRadiusLabel, () => { checkProximity(); });
+  bindSlider("fetchRadius", "fetchRadiusVal", "fetchRadiusKm", fmtFetchLabel);
   bindSlider("maxAge", "maxAgeVal", "maxAgeH", v => v + " h", updateAgeStat);
 
   // Checkboxes
@@ -880,6 +946,13 @@ function bindUI() {
   bindCheck("chAudio", "chAudio");
   bindCheck("chVisual", "chVisual");
   bindCheck("chHaptic", "chHaptic");
+
+  // Units toggle re-renders every distance currently on screen.
+  const imperialInput = document.getElementById("chImperial");
+  if (imperialInput) {
+    imperialInput.checked = !!S.imperial;
+    imperialInput.onchange = () => { S.imperial = imperialInput.checked; saveSettings(); refreshUnits(); };
+  }
 
   document.getElementById("btnRefresh").onclick = () => {
     const c = pos ? { lat: pos.lat, lng: pos.lon } : map.getCenter();
@@ -902,6 +975,15 @@ function bindUI() {
     fetchCameras(c.lat, c.lng);
   };
 
+  // Start gate: a single deliberate gesture that unlocks alert audio (which
+  // browsers block until a user interaction) and grabs the screen wake lock.
+  document.getElementById("btnStart").onclick = () => {
+    beepUnlockOnly();
+    wakeLockWanted = true;
+    acquireWakeLock();
+    document.getElementById("startGate").classList.remove("show");
+  };
+
   setMuted(S.muted);
   setFollow(S.follow);
 }
@@ -916,11 +998,26 @@ function beepUnlockOnly() {
 }
 document.addEventListener("pointerdown", beepUnlockOnly, { once: true });
 
+/* Wake Lock — keep the screen awake while driving. The lock is released
+   automatically when the tab is hidden, so re-acquire it on return. */
+let wakeLock = null, wakeLockWanted = false;
+async function acquireWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try { wakeLock = await navigator.wakeLock.request("screen"); }
+  catch (e) { /* not permitted right now (e.g. tab not visible) */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (wakeLockWanted && document.visibilityState === "visible") acquireWakeLock();
+});
+
 /* ============================================================
    Boot
    ============================================================ */
 initMap();
 bindUI();
+
+// Ask for the one gesture that lets alerts make sound and the screen stay on.
+document.getElementById("startGate").classList.add("show");
 
 if (cache) {
   applyCameras(cache.cameras);
