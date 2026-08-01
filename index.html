@@ -376,6 +376,7 @@
 const LS_SETTINGS = "alprmap.settings.v1";
 const LS_CACHE    = "alprmap.cameras.v1";
 const LS_VIEW     = "alprmap.lastview.v1";
+const LS_UNITS_MIGRATED = "alprmap.unitsMigrated.v1";
 
 const DEFAULTS = {
   alertRadiusM: 300,     // alert threshold (m)
@@ -388,11 +389,21 @@ const DEFAULTS = {
   chVoice: false,        // spoken callouts (Web Speech) — opt-in
   muted: false,
   follow: true,
-  imperial: false,       // display distances in miles/feet instead of km/m
+  imperial: true,        // display distances in miles/feet (US default; toggle in settings)
   basemap: "dark_all",   // selected map style (see BASEMAPS)
 };
 
 let S = loadSettings();
+
+// This app's audience is US; it shipped metric-by-default by oversight. Flip
+// existing metric installs to miles/feet once — after this, whatever the user
+// chooses in settings sticks.
+try {
+  if (!localStorage.getItem(LS_UNITS_MIGRATED)) {
+    if (!S.imperial) { S.imperial = true; saveSettings(); }
+    localStorage.setItem(LS_UNITS_MIGRATED, "1");
+  }
+} catch (e) {}
 function loadSettings() {
   try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}")); }
   catch (e) { return Object.assign({}, DEFAULTS); }
