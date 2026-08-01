@@ -26,6 +26,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so we can count the day's revisions
 
       - uses: actions/setup-python@v5
         with:
@@ -38,6 +40,14 @@ jobs:
           mkdir -p _site
           cp -r index.html demo.html manifest.webmanifest sw.js vendor icons _site/
           touch _site/.nojekyll
+
+          # Build version: vYYYY.MM.DD.<revisions deployed that UTC date>.
+          TODAY=$(date -u +%Y-%m-%d)
+          REV=$(git log --first-parent --pretty=%cd --date=short | grep -c "^${TODAY}$" || true)
+          [ -z "$REV" ] && REV=0
+          VER="v$(date -u +%Y.%m.%d).$(printf '%03d' "$REV")"
+          echo "Build version: $VER"
+          sed -i "s/__BUILD_VERSION__/${VER}/g" _site/index.html _site/demo.html
 
       - uses: actions/configure-pages@v5
         with:
