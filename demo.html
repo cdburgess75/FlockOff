@@ -67,6 +67,20 @@
   #statusBar .stat.bad b  { color: var(--red); }
   #statusBar .stat.good b { color: var(--green); }
 
+  /* ---------- Coverage caution ("silence is not safety") ---------- */
+  #coverageNote {
+    display: none;
+    flex: 0 0 auto;
+    background: rgba(210,153,34,.12);
+    border-top: 1px solid var(--border);
+    color: var(--amber);
+    font-size: 12px;
+    padding: 6px 12px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  #coverageNote.show { display: block; }
+
   /* ---------- Floating controls ---------- */
   .fabs {
     position: absolute;
@@ -246,10 +260,16 @@
 
 <div id="map"></div>
 
+<div id="coverageNote">
+  ⚠ Quiet ≠ clear — camera data is crowdsourced and incomplete. No alert does
+  not mean no camera; unmapped and mobile units won't appear here.
+</div>
+
 <div id="statusBar">
   <span class="stat" id="stGps">GPS: <b>waiting…</b></span>
   <span class="stat" id="stCams">Cameras: <b>–</b></span>
   <span class="stat" id="stAge">Data: <b>none</b></span>
+  <span class="stat" id="stCoverage">Coverage: <b>–</b></span>
   <span class="stat" id="stNearest">Nearest: <b>–</b></span>
 </div>
 
@@ -823,7 +843,7 @@ function bearing(lat1, lon1, lat2, lon2) {
 }
 
 function checkProximity() {
-  if (!pos || cameras.length === 0) { updateMarkerColors(); return; }
+  if (!pos || cameras.length === 0) { updateMarkerColors(); updateCoverage(); return; }
 
   const threshold = S.alertRadiusM;
   nearest = null;
@@ -862,6 +882,7 @@ function checkProximity() {
 
   updateMarkerColors();
   updateBanner();
+  updateCoverage();
 }
 
 function passesHeadingFilter(cam) {
@@ -958,10 +979,33 @@ function updateAgeStat() {
   const age = Date.now() - cache.fetchedAt;
   const stale = age > S.maxAgeH * 3600 * 1000;
   setStat("stAge", fmtAge(age), stale ? "warn" : "");
+  updateCoverage();
 }
 
 function updateCamCountStat() {
   setStat("stCams", String(cameras.length));
+}
+
+/* Honest confidence about the current area's data. Deliberately never
+   reports "all clear" — the dataset is crowdsourced and incomplete, so the
+   best it can say is how fresh the crowdsourced copy is. */
+function coverageInfo() {
+  if (!cache) return { label: "no data", cls: "bad" };
+  const age = Date.now() - cache.fetchedAt;
+  const stale = age > S.maxAgeH * 3600 * 1000;
+  return { label: stale ? "stale" : "crowdsourced", cls: stale ? "warn" : "" };
+}
+
+/* "Silence is not safety." Surface the caution precisely in the states where
+   a driver is most likely to misread an absence of alerts as an absence of
+   cameras: when nothing is loaded, or when the nearest camera is comfortably
+   far and the map looks reassuringly quiet. */
+function updateCoverage() {
+  const ci = coverageInfo();
+  setStat("stCoverage", ci.label, ci.cls);
+  const quiet = !!pos && (!nearest || nearest.dist > S.alertRadiusM * 2);
+  const show = cameras.length === 0 || quiet;
+  document.getElementById("coverageNote").classList.toggle("show", show);
 }
 
 let toastTimer = null;
@@ -1088,6 +1132,7 @@ if (cache) {
 } else {
   setStat("stAge", "none", "warn");
 }
+updateCoverage();
 
 initGeo();
 
