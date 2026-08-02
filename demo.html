@@ -330,6 +330,11 @@
     gap: 8px;
     z-index: 1000;
   }
+  /* Full-screen map: hide the header and tab bar so the map fills the
+     viewport; the FAB stack drops to the bottom edge in place of the bar. */
+  body.fullmap #appHeader,
+  body.fullmap #tabBar { display: none; }
+  body.fullmap .fabs { bottom: calc(16px + env(safe-area-inset-bottom)); }
   .fab {
     width: 46px; height: 46px;
     border-radius: 50%;
@@ -654,6 +659,7 @@
 </nav>
 
 <div class="fabs">
+  <button class="fab" id="fabFull" title="Full-screen map">⛶</button>
   <button class="fab" id="fabMute" title="Mute alerts">🔔</button>
   <button class="fab active" id="fabFollow" title="Follow my position">◎</button>
   <button class="fab" id="fabSettings" title="Settings">⚙</button>
@@ -1636,6 +1642,27 @@ function setMuted(on) {
   updateBanner();
 }
 
+function setFullMap(on) {
+  // Only makes sense on the map; jump there if we're elsewhere.
+  if (on && currentView !== "map") setView("map");
+  document.body.classList.toggle("fullmap", on);
+  const b = document.getElementById("fabFull");
+  b.classList.toggle("active", on);
+  b.textContent = on ? "🗗" : "⛶";
+  b.title = on ? "Exit full-screen map" : "Full-screen map";
+  // Best-effort native full-screen; ignore rejections (blocked contexts, iOS).
+  try {
+    if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+      const p = document.documentElement.requestFullscreen();
+      if (p && p.catch) p.catch(function () {});
+    } else if (!on && document.fullscreenElement && document.exitFullscreen) {
+      const p = document.exitFullscreen();
+      if (p && p.catch) p.catch(function () {});
+    }
+  } catch (e) {}
+  if (map) setTimeout(function () { map.invalidateSize(); }, 60);
+}
+
 function bindUI() {
   document.getElementById("fabFollow").onclick = () => setFollow(!S.follow);
   document.getElementById("fabMute").onclick = () => {
@@ -1644,6 +1671,12 @@ function bindUI() {
     setMuted(!S.muted);
   };
   document.getElementById("fabSettings").onclick = () => setView("setup");
+  document.getElementById("fabFull").onclick = () => setFullMap(!document.body.classList.contains("fullmap"));
+  // Keep the toggle honest when the browser exits full-screen on its own
+  // (e.g. the user hits Escape).
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && document.body.classList.contains("fullmap")) setFullMap(false);
+  });
 
   // Bottom tab bar
   document.getElementById("tabMap").onclick = () => setView("map");
