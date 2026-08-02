@@ -81,6 +81,11 @@
     --text:#ece9f7; --muted:#a99fce; --accent:#a78bfa; --on-accent:#0d0820;
     --amber:#f5a623; --red:#ff5b6e; --green:#42d19a;
   }
+  :root[data-theme="freedom"] {
+    --bg:#0a1533; --panel:#12224c; --panel-2:#1b2e63; --border:#324d92;
+    --text:#f6f9ff; --muted:#a9bce4; --accent:#5b8dff; --on-accent:#06122e;
+    --amber:#f2b03a; --red:#ff4d5e; --green:#43c08a;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
   body {
@@ -599,6 +604,7 @@
       <button class="tb-swatch" data-key="amber" title="Amber" aria-label="Amber" style="background:linear-gradient(135deg,#0a0700 0 50%,#ffb02e 50% 100%)"></button>
       <button class="tb-swatch" data-key="crimson" title="Crimson" aria-label="Crimson" style="background:linear-gradient(135deg,#0c0708 0 50%,#ff4d5e 50% 100%)"></button>
       <button class="tb-swatch" data-key="violet" title="Violet" aria-label="Violet" style="background:linear-gradient(135deg,#0a0814 0 50%,#a78bfa 50% 100%)"></button>
+      <button class="tb-swatch" data-key="freedom" title="Freedom" aria-label="Freedom" style="background:linear-gradient(120deg,#b22234 0 33%,#ffffff 33% 66%,#3c3b6e 66% 100%)"></button>
     </div>
   </div>
   <div class="setting">
@@ -1525,8 +1531,8 @@ function setFollow(on) {
   if (on && pos) map.panTo([pos.lat, pos.lon]);
 }
 
-const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", daylight: "Daylight", highvis: "High-Visibility" };
-const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "daylight", "highvis"];
+const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", freedom: "Freedom", daylight: "Daylight", highvis: "High-Visibility" };
+const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "freedom", "daylight", "highvis"];
 function setTheme(key) {
   if (!THEMES[key]) key = "packet";
   S.theme = key;
