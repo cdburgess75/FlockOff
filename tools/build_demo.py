@@ -130,7 +130,12 @@ HARNESS = r"""<script>
     { id: 1005, lat: 33.7562, lon: -84.3792, tags: { "surveillance:type": "ALPR", operator: "Flock Safety", manufacturer: "Flock Safety", direction: "90", start_date: "2025-03-10" } },
     { id: 1006, lat: 33.7560, lon: -84.3735, tags: { "surveillance:type": "ALPR", operator: "GDOT", direction: "90", start_date: "2025-05-05" } },
     { id: 1007, lat: 33.7500, lon: -84.3905, tags: { "surveillance:type": "ALPR", operator: "Flock Safety", direction: "180", start_date: "2025-02-18" } },
-    { id: 1008, lat: 33.7540, lon: -84.3808, tags: { "surveillance:type": "ALPR", operator: "Flock Safety", direction: "0", start_date: "2025-04-22" } }
+    { id: 1008, lat: 33.7540, lon: -84.3808, tags: { "surveillance:type": "ALPR", operator: "Flock Safety", direction: "0", start_date: "2025-04-22" } },
+    // Other detector kinds, for the Layers toggles (gunshot shows by default).
+    { id: 2001, lat: 33.7490, lon: -84.3878, tags: { "man_made": "surveillance", "surveillance:type": "gunshot_detector", operator: "SoundThinking" } },
+    { id: 2002, lat: 33.7532, lon: -84.3868, tags: { "highway": "speed_camera", operator: "City of Atlanta", direction: "45" } },
+    { id: 2003, lat: 33.7519, lon: -84.3796, tags: { "man_made": "surveillance", "surveillance:zone": "traffic", operator: "GDOT", direction: "300" } },
+    { id: 2004, lat: 33.7549, lon: -84.3902, tags: { "man_made": "surveillance", "surveillance:type": "camera", operator: "Private", direction: "135" } }
   ];
 
   // ---- Mock Overpass endpoint ----
