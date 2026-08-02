@@ -261,8 +261,9 @@
     filter: saturate(1.08) contrast(1.03);
   }
   /* Freedom: a light, uniformly blue-tinted map (desaturate to grey, then
-     sepia + hue-rotate paints a soft blue over it). */
-  :root[data-theme="freedom"] #map.map-muted .leaflet-tile {
+     sepia + hue-rotate paints a soft blue over it). Applies to ANY map style,
+     so the theme — not the map-style dropdown — drives the tint. */
+  :root[data-theme="freedom"] #map .leaflet-tile {
     filter: brightness(1.1) saturate(0.4) contrast(0.9) sepia(0.35) hue-rotate(188deg);
   }
   :root[data-theme="freedom"] .leaflet-container,
