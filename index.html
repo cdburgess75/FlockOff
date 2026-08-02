@@ -793,6 +793,11 @@ const OVERPASS_ENDPOINTS = [
 let map, userMarker, accCircle, baseLayer;
 let cameras = [];            // normalized camera objects
 let camMarkers = new Map();  // id -> L.Marker (teardrop pin divIcon)
+let camCones = new Map();    // id -> L.Polygon estimated field-of-view wedge
+let conesLayer = null;       // holds all cones; toggled by zoom level
+const CONE_MIN_ZOOM = 14;    // driving zoom is 16, so cones appear naturally
+const CONE_RANGE_M = 60;     // typical ALPR plate-read reach
+const CONE_HALF_ANGLE = 25;  // ±25° ≈ a 50° lens
 let cache = loadCache();     // { cameras, fetchedAt, center:{lat,lon}, radiusM }
 let pos = null;              // { lat, lon, accuracy, heading, speed }
 let nearest = null;          // { cam, dist }
@@ -863,6 +868,16 @@ function initMap() {
   map = L.map("map", { zoomControl: true }).setView([view.lat, view.lon], view.zoom);
 
   setBasemap(S.basemap);
+
+  // Camera FOV cones live in their own layer so zooming toggles them all at
+  // once — visible from CONE_MIN_ZOOM in (clutter at wider zooms).
+  conesLayer = L.layerGroup();
+  if (map.getZoom() >= CONE_MIN_ZOOM) conesLayer.addTo(map);
+  map.on("zoomend", () => {
+    const want = map.getZoom() >= CONE_MIN_ZOOM;
+    if (want && !map.hasLayer(conesLayer)) map.addLayer(conesLayer);
+    else if (!want && map.hasLayer(conesLayer)) map.removeLayer(conesLayer);
+  });
 
   map.on("moveend", () => {
     const c = map.getCenter();
@@ -1169,16 +1184,46 @@ function applyCameras(cams) {
   for (const [id, m] of camMarkers) {
     if (!ids.has(id)) { map.removeLayer(m); camMarkers.delete(id); }
   }
+  for (const [id, c] of camCones) {
+    if (!ids.has(id)) { conesLayer.removeLayer(c); camCones.delete(id); }
+  }
   for (const cam of cameras) {
     if (!camMarkers.has(cam.id)) {
       const m = L.marker([cam.lat, cam.lon], { icon: pinIcon(), keyboard: false })
         .bindPopup(popupHtml(cam))
         .addTo(map);
       camMarkers.set(cam.id, m);
+      // Estimated field of view — only cameras that carry an OSM direction
+      // tag; there's nothing honest to draw for the rest.
+      if (cam.direction != null && conesLayer) {
+        const cone = L.polygon(coneLatLngs(cam), {
+          stroke: false, fillColor: cssVar("--pin"), fillOpacity: 0.25,
+          interactive: false,
+        });
+        conesLayer.addLayer(cone);
+        camCones.set(cam.id, cone);
+      }
     }
   }
   updateCamCountStat();
   checkProximity();
+}
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
+}
+
+/* Wedge from the camera along its tagged facing direction. */
+function coneLatLngs(cam) {
+  const pts = [[cam.lat, cam.lon]];
+  for (let a = cam.direction - CONE_HALF_ANGLE; a <= cam.direction + CONE_HALF_ANGLE; a += 5) {
+    const br = a * Math.PI / 180;
+    pts.push([
+      cam.lat + CONE_RANGE_M * Math.cos(br) / 111320,
+      cam.lon + CONE_RANGE_M * Math.sin(br) / (111320 * Math.cos(cam.lat * Math.PI / 180)),
+    ]);
+  }
+  return pts;
 }
 
 /* Teardrop camera pin. The teardrop + lens use currentColor, so the state
@@ -1292,6 +1337,7 @@ function passesHeadingFilter(cam) {
 
 function updateMarkerColors() {
   const threshold = S.alertRadiusM;
+  const coneColor = { far: cssVar("--pin"), near: cssVar("--amber"), alert: cssVar("--red") };
   for (const cam of cameras) {
     const m = camMarkers.get(cam.id);
     if (!m) continue;
@@ -1306,6 +1352,8 @@ function updateMarkerColors() {
       el.classList.toggle("alert", state === "alert");
       el.classList.toggle("near", state === "near");
     }
+    const cone = camCones.get(cam.id);
+    if (cone) cone.setStyle({ fillColor: coneColor[state] });
   }
 }
 
@@ -1541,6 +1589,8 @@ function setTheme(key) {
   if (meta && bg) meta.setAttribute("content", bg);
   const nameEl = document.getElementById("tbName");
   if (nameEl) nameEl.textContent = THEMES[key];
+  // FOV cones carry inline fill colors sampled from the old theme's vars.
+  if (map) updateMarkerColors();
   document.querySelectorAll(".tb-swatch").forEach(function (b) {
     b.classList.toggle("active", b.dataset.key === key);
   });
