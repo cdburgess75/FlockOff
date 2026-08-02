@@ -82,10 +82,14 @@
     --amber:#f5a623; --red:#ff5b6e; --green:#42d19a;
   }
   :root[data-theme="freedom"] {
-    --bg:#0a1533; --panel:#12224c; --panel-2:#1b2e63; --border:#324d92;
-    --text:#f6f9ff; --muted:#a9bce4; --accent:#5b8dff; --on-accent:#06122e;
-    --amber:#f2b03a; --red:#ff4d5e; --green:#43c08a;
+    /* Red/white/blue, light: white ground, blue text, red logo + alerts. */
+    --bg:#ffffff; --panel:#f3f6fc; --panel-2:#e9eff8; --border:#ccd8ec;
+    --text:#153a86; --muted:#47609f; --accent:#1e50d8; --on-accent:#ffffff;
+    --amber:#b45309; --red:#c8102e; --green:#157a3c;
   }
+  /* The logo (and its version) go red; everything else stays blue. */
+  :root[data-theme="freedom"] .brand,
+  :root[data-theme="freedom"] .hd-brand .ver { color: var(--red); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
   body {
@@ -253,7 +257,8 @@
   #map.map-muted .leaflet-tile {
     filter: brightness(.75) contrast(1.1) saturate(.65) hue-rotate(10deg);
   }
-  :root[data-theme="daylight"] #map.map-muted .leaflet-tile {
+  :root[data-theme="daylight"] #map.map-muted .leaflet-tile,
+  :root[data-theme="freedom"] #map.map-muted .leaflet-tile {
     filter: saturate(1.08) contrast(1.03);
   }
 
