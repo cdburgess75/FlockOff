@@ -98,6 +98,18 @@
   }
   :root[data-theme="nightwatch"] .brand,
   :root[data-theme="nightwatch"] .hd-brand .ver { color: var(--red); }
+  :root[data-theme="liberty"] {
+    /* Light, red-forward: white ground, dark text, red logo + accents. */
+    --bg:#ffffff; --panel:#f2f4f7; --panel-2:#e8ebf0; --border:#d4dae2;
+    --text:#1a1f2b; --muted:#6b7480; --accent:#d21f2e; --on-accent:#ffffff;
+    --amber:#b45309; --red:#d21f2e; --green:#157a3c;
+  }
+  :root[data-theme="watchman"] {
+    /* Dark navy, red-forward: deep slate ground, white text, red logo. */
+    --bg:#0e1420; --panel:#172033; --panel-2:#1f2a40; --border:#2c3a54;
+    --text:#eef2f8; --muted:#93a0b4; --accent:#ff4d5a; --on-accent:#ffffff;
+    --amber:#f2b03a; --red:#ff4d5a; --green:#3ad39a;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
   body {
@@ -265,7 +277,8 @@
   #map.map-muted .leaflet-tile {
     filter: brightness(.75) contrast(1.1) saturate(.65) hue-rotate(10deg);
   }
-  :root[data-theme="daylight"] #map.map-muted .leaflet-tile {
+  :root[data-theme="daylight"] #map.map-muted .leaflet-tile,
+  :root[data-theme="liberty"] #map.map-muted .leaflet-tile {
     filter: saturate(1.08) contrast(1.03);
   }
   /* Freedom: a light, uniformly blue-tinted map — desaturate toward grey,
@@ -284,6 +297,12 @@
   }
   :root[data-theme="nightwatch"] .leaflet-container,
   :root[data-theme="nightwatch"] #map { background: #0a1428; }
+  /* Watchman: dark slate-navy map on any Map style — dim + a light blue wash. */
+  :root[data-theme="watchman"] #map .leaflet-tile {
+    filter: brightness(0.62) saturate(0.6) contrast(1.05) sepia(0.35) hue-rotate(188deg);
+  }
+  :root[data-theme="watchman"] .leaflet-container,
+  :root[data-theme="watchman"] #map { background: #0c1626; }
 
   /* ---------- Status bar ---------- */
   #statusBar {
@@ -613,6 +632,8 @@
           <button class="tb-swatch" data-key="violet" title="Violet" aria-label="Violet" style="background:linear-gradient(135deg,#0a0814 0 50%,#a78bfa 50% 100%)"></button>
           <button class="tb-swatch" data-key="freedom" title="Freedom" aria-label="Freedom" style="background:linear-gradient(120deg,#b22234 0 33%,#ffffff 33% 66%,#3c3b6e 66% 100%)"></button>
           <button class="tb-swatch" data-key="nightwatch" title="Nightwatch" aria-label="Nightwatch" style="background:linear-gradient(120deg,#b22234 0 33%,#0d1526 33% 66%,#5b8cff 66% 100%)"></button>
+          <button class="tb-swatch" data-key="liberty" title="Liberty" aria-label="Liberty" style="background:linear-gradient(135deg,#eef1f5 0 50%,#d21f2e 50% 100%)"></button>
+          <button class="tb-swatch" data-key="watchman" title="Watchman" aria-label="Watchman" style="background:linear-gradient(135deg,#141b2b 0 50%,#ff4d5a 50% 100%)"></button>
         </div>
       </div>
       <div class="setting">
@@ -1572,8 +1593,8 @@ function setFollow(on) {
   if (on && pos) map.panTo([pos.lat, pos.lon]);
 }
 
-const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", freedom: "Freedom", nightwatch: "Nightwatch", daylight: "Daylight", highvis: "High-Visibility" };
-const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "freedom", "nightwatch", "daylight", "highvis"];
+const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", freedom: "Freedom", nightwatch: "Nightwatch", liberty: "Liberty", watchman: "Watchman", daylight: "Daylight", highvis: "High-Visibility" };
+const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "freedom", "nightwatch", "liberty", "watchman", "daylight", "highvis"];
 function setTheme(key) {
   if (!THEMES[key]) key = "packet";
   S.theme = key;
