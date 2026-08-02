@@ -669,6 +669,9 @@
       <div class="setting">
         <label>Voice callouts <input type="checkbox" id="chVoice"></label>
       </div>
+      <div class="btnRow">
+        <button class="btn" id="btnTestAlert">Test alert now</button>
+      </div>
 
       <h3>Display</h3>
       <div class="setting">
@@ -1698,9 +1701,13 @@ function calloutText(cam, dist) {
   return (KINDS[cam.kind || "alpr"] || KINDS.alpr).spoken + " ahead, " + fmtDistSpoken(dist);
 }
 
+let testAlertUntil = 0;   // while set, the test card holds the banner slot
 function updateBanner() {
   const el = document.getElementById("alertBanner");
   const show = S.chVisual && !S.muted && nearest && nearest.dist <= S.alertRadiusM;
+  // A real alert always takes over; otherwise don't let routine GPS ticks
+  // wipe an in-progress test card.
+  if (!show && Date.now() < testAlertUntil) return;
   if (show) {
     const short = (KINDS[nearest.cam.kind || "alpr"] || KINDS.alpr).short;
     const op = nearest.cam.operator ? escHtml(nearest.cam.operator) : short;
@@ -1985,6 +1992,26 @@ function bindUI() {
   document.getElementById("fabSettings").onclick = () => setView("setup");
   document.getElementById("fabFull").onclick = () => setFullMap(!document.body.classList.contains("fullmap"));
   document.getElementById("coverageNote").onclick = hideCoverageNote;
+  // Test alert: fire the real channels with the current settings so sound
+  // problems (silent switch, media volume, Bluetooth routing) show up in the
+  // driveway instead of on the road.
+  let testBannerTimer = null;
+  document.getElementById("btnTestAlert").onclick = () => {
+    beepUnlockOnly();
+    if (S.muted) { toast("Alerts are muted — tap the bell on the map first"); return; }
+    if (S.chAudio) beep(); else toast("Audio beep is switched off above");
+    if (S.chVoice) speak("This is a test alert");
+    if (S.chHaptic && navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    const el = document.getElementById("alertBanner");
+    el.innerHTML = "⚠ Test alert" +
+      "<small>no sound? check the silent switch, media volume &amp; Bluetooth</small>";
+    el.classList.add("show");
+    document.body.classList.add("alerting");
+    testAlertUntil = Date.now() + 5000;
+    clearTimeout(testBannerTimer);
+    testBannerTimer = setTimeout(() => { testAlertUntil = 0; updateBanner(); }, 5000);
+  };
+
   // Alert card: tap to jump to the camera that's alerting.
   document.getElementById("alertBanner").onclick = () => {
     if (!nearest) return;
