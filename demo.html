@@ -317,8 +317,12 @@
     padding: 6px 12px;
     text-align: center;
     line-height: 1.45;
+    cursor: pointer;
+    animation: coverageFade .3s ease;
   }
   #coverageNote.show { display: block; }
+  #coverageNote .dismiss { opacity: .7; font-size: .9em; }
+  @keyframes coverageFade { from { opacity: 0; } to { opacity: 1; } }
 
   /* ---------- Floating controls ---------- */
   .fabs {
@@ -558,9 +562,10 @@
 <main id="views">
   <section class="view on" id="viewMap">
     <div id="map"></div>
-    <div id="coverageNote">
+    <div id="coverageNote" title="Tap to dismiss">
       ⚠ Quiet ≠ clear — camera data is crowdsourced and incomplete. No alert does
       not mean no camera; unmapped and mobile units won't appear here.
+      <span class="dismiss">(tap to dismiss)</span>
     </div>
   </section>
   <section class="view" id="viewNearby">
@@ -1512,12 +1517,31 @@ function coverageInfo() {
    a driver is most likely to misread an absence of alerts as an absence of
    cameras: when nothing is loaded, or when the nearest camera is comfortably
    far and the map looks reassuringly quiet. */
+let coverageArmed = true;      // may show once per quiet episode
+let coverageHideTimer = null;
+function hideCoverageNote() {
+  clearTimeout(coverageHideTimer);
+  document.getElementById("coverageNote").classList.remove("show");
+}
 function updateCoverage() {
   const ci = coverageInfo();
   setStat("stCoverage", ci.label, ci.cls);
   const quiet = !!pos && (!nearest || nearest.dist > S.alertRadiusM * 2);
-  const show = cameras.length === 0 || quiet;
-  document.getElementById("coverageNote").classList.toggle("show", show);
+  const cond = cameras.length === 0 || quiet;
+  if (cond) {
+    // Show it once when we newly enter a quiet/empty state, then let it go
+    // away on its own — don't re-pin it on every GPS tick.
+    if (coverageArmed) {
+      coverageArmed = false;
+      document.getElementById("coverageNote").classList.add("show");
+      clearTimeout(coverageHideTimer);
+      coverageHideTimer = setTimeout(hideCoverageNote, 8000);
+    }
+  } else {
+    // Coverage looks live again — re-arm so the reminder can return later.
+    coverageArmed = true;
+    hideCoverageNote();
+  }
 }
 
 let toastTimer = null;
@@ -1672,6 +1696,7 @@ function bindUI() {
   };
   document.getElementById("fabSettings").onclick = () => setView("setup");
   document.getElementById("fabFull").onclick = () => setFullMap(!document.body.classList.contains("fullmap"));
+  document.getElementById("coverageNote").onclick = hideCoverageNote;
   // Keep the toggle honest when the browser exits full-screen on its own
   // (e.g. the user hits Escape).
   document.addEventListener("fullscreenchange", () => {
