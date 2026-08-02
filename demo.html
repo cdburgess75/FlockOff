@@ -1063,8 +1063,10 @@ function initMap() {
     const v = JSON.parse(localStorage.getItem(LS_VIEW) || "null");
     if (v && isFinite(v.lat)) view = v;
   } catch (e) {}
-  if (cache && cache.center) {
-    view = { lat: cache.center.lat, lon: cache.center.lon, zoom: 13 };
+  if (cache && cache.regions && cache.regions.length) {
+    const r = cache.regions[cache.regions.length - 1];
+    const c = r.kind === "bbox" ? { lat: (r.s + r.n) / 2, lon: (r.w + r.e) / 2 } : r;
+    view = { lat: c.lat, lon: c.lon, zoom: 13 };
   }
 
   map = L.map("map", { zoomControl: true }).setView([view.lat, view.lon], view.zoom);
@@ -1076,7 +1078,7 @@ function initMap() {
     try {
       localStorage.setItem(LS_VIEW, JSON.stringify({ lat: c.lat, lon: c.lng, zoom: map.getZoom() }));
     } catch (e) {}
-    maybeRefetchForPan(c.lat, c.lng);
+    viewportEnsureDebounced();
   });
 
   // Manual drag pauses follow-me so the map doesn't fight the user.
@@ -1170,7 +1172,17 @@ function onPosErr(err) {
 function loadCache() {
   try {
     const c = JSON.parse(localStorage.getItem(LS_CACHE) || "null");
-    if (c && Array.isArray(c.cameras)) return c;
+    if (c && Array.isArray(c.cameras)) {
+      // v1 caches held one circle (center + radius); wrap it as a region so
+      // the merged multi-region model below can keep using it.
+      if (!Array.isArray(c.regions)) {
+        c.regions = c.center
+          ? [{ kind: "circle", lat: c.center.lat, lon: c.center.lon,
+               radiusM: c.radiusM || 0, fetchedAt: c.fetchedAt || 0 }]
+          : [];
+      }
+      return c;
+    }
   } catch (e) {}
   return null;
 }
@@ -1201,13 +1213,11 @@ function overpassQuery(lat, lon, radiusM) {
 out body;`;
 }
 
-async function fetchCameras(lat, lon) {
-  if (fetching) return;
-  fetching = true;
-  setStat("stAge", "fetching…");
-  const radiusM = S.fetchRadiusKm * 1000;
-  const body = "data=" + encodeURIComponent(overpassQuery(lat, lon, radiusM));
-
+/* Run one Overpass query against the mirror list; resolves to normalized
+   cameras or throws the last error. The DATA stat goes amber while a fetch
+   is in flight and green once it lands (updateAgeStat). */
+async function runOverpass(query) {
+  const body = "data=" + encodeURIComponent(query);
   let lastErr = null;
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
@@ -1222,25 +1232,37 @@ async function fetchCameras(lat, lon) {
       clearTimeout(timer);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const json = await res.json();
-      const cams = (json.elements || [])
+      return (json.elements || [])
         .filter(e => e.type === "node" && isFinite(e.lat) && isFinite(e.lon))
         .map(normalize);
-      cache = { cameras: cams, fetchedAt: Date.now(), center: { lat, lon }, radiusM };
-      saveCache(cache);
-      applyCameras(cams);
-      updateAgeStat();
-      toast(cams.length + " ALPR camera" + (cams.length === 1 ? "" : "s") + " loaded within " + S.fetchRadiusKm + " km");
-      hideEmptyState();
-      fetching = false;
-      return;
     } catch (e) {
-      lastErr = e;
-      // try next mirror
+      lastErr = e;   // try next mirror
     }
   }
+  throw lastErr || new Error("no Overpass mirror reachable");
+}
 
-  fetching = false;
-  // All endpoints failed — fall back to cache, surface quietly.
+/* Fetches MERGE into the cache instead of replacing it, so panning around
+   accumulates coverage instead of dropping the cameras you already had.
+   Each successful fetch also records the region it covered, so we know
+   which areas are loaded and fresh. */
+function mergeCameras(cams, region) {
+  if (!cache) cache = { cameras: [], regions: [], fetchedAt: 0 };
+  const byId = new Map(cache.cameras.map(c => [c.id, c]));
+  const before = byId.size;
+  for (const c of cams) byId.set(c.id, c);
+  cache.cameras = Array.from(byId.values());
+  region.fetchedAt = Date.now();
+  cache.regions.push(region);
+  if (cache.regions.length > 24) cache.regions.splice(0, cache.regions.length - 24);
+  cache.fetchedAt = region.fetchedAt;
+  saveCache(cache);
+  applyCameras(cache.cameras);
+  updateAgeStat();
+  return byId.size - before;
+}
+
+function fetchFailed(lastErr) {
   if (cache) {
     applyCameras(cache.cameras);
     updateAgeStat();
@@ -1253,29 +1275,97 @@ async function fetchCameras(lat, lon) {
   }
 }
 
-/** Fetch if we have no data, the cache is stale, or the point of interest
-    has drifted outside the cached coverage. */
-function ensureData(lat, lon) {
+async function fetchCameras(lat, lon) {
   if (fetching) return;
-  if (!cache) { fetchCameras(lat, lon); return; }
-  const ageMs = Date.now() - cache.fetchedAt;
-  if (ageMs > S.maxAgeH * 3600 * 1000) { fetchCameras(lat, lon); return; }
-  const d = haversine(lat, lon, cache.center.lat, cache.center.lon);
-  if (d > cache.radiusM * 0.6) fetchCameras(lat, lon);
+  fetching = true;
+  setStat("stAge", "fetching…", "warn");
+  const radiusM = S.fetchRadiusKm * 1000;
+  try {
+    const cams = await runOverpass(overpassQuery(lat, lon, radiusM));
+    fetching = false;   // before merge, so updateAgeStat paints the green age
+    const added = mergeCameras(cams, { kind: "circle", lat, lon, radiusM });
+    toast(cams.length + " ALPR camera" + (cams.length === 1 ? "" : "s") + " within " + S.fetchRadiusKm + " km" +
+      (added ? " (" + added + " new)" : ""));
+    hideEmptyState();
+  } catch (e) {
+    fetching = false;
+    fetchFailed(e);
+  }
 }
 
-function maybeRefetchForPan(lat, lon) {
-  // Panning far beyond the cached box pulls fresh data for the new area,
-  // but only when we're not tracking the user (GPS drives fetches otherwise).
-  if (S.follow && pos) return;
-  if (!cache) return;
-  const d = haversine(lat, lon, cache.center.lat, cache.center.lon);
-  if (d > cache.radiusM) ensureDataDebounced(lat, lon);
+/* Viewport fetch: pull cameras for whatever area the map is showing. */
+async function fetchCamerasBbox(b) {
+  if (fetching) return;
+  fetching = true;
+  setStat("stAge", "fetching…", "warn");
+  const s = b.getSouth(), w = b.getWest(), n = b.getNorth(), e = b.getEast();
+  const box = s.toFixed(5) + "," + w.toFixed(5) + "," + n.toFixed(5) + "," + e.toFixed(5);
+  const q = `[out:json][timeout:25];
+(
+  node["surveillance:type"="ALPR"](${box});
+  node["man_made"="surveillance"]["surveillance:type"="ALPR"](${box});
+);
+out body;`;
+  try {
+    const cams = await runOverpass(q);
+    fetching = false;   // before merge, so updateAgeStat paints the green age
+    const added = mergeCameras(cams, { kind: "bbox", s, w, n, e });
+    if (added) toast(added + " more camera" + (added === 1 ? "" : "s") + " loaded for this area");
+    hideEmptyState();
+  } catch (err) {
+    fetching = false;
+    fetchFailed(err);
+  }
 }
-let panTimer = null;
-function ensureDataDebounced(lat, lon) {
+
+function regionFresh(r) {
+  return Date.now() - r.fetchedAt < S.maxAgeH * 3600 * 1000;
+}
+function pointCovered(lat, lon) {
+  if (!cache) return false;
+  return cache.regions.some(r => regionFresh(r) && (
+    r.kind === "bbox"
+      ? lat >= r.s && lat <= r.n && lon >= r.w && lon <= r.e
+      : haversine(lat, lon, r.lat, r.lon) < r.radiusM * 0.6));
+}
+function boundsCovered(b) {
+  if (!cache) return false;
+  const corners = [[b.getSouth(), b.getWest()], [b.getSouth(), b.getEast()],
+                   [b.getNorth(), b.getWest()], [b.getNorth(), b.getEast()]];
+  return cache.regions.some(r => {
+    if (!regionFresh(r)) return false;
+    if (r.kind === "bbox")
+      return b.getSouth() >= r.s && b.getNorth() <= r.n && b.getWest() >= r.w && b.getEast() <= r.e;
+    return corners.every(([la, lo]) => haversine(la, lo, r.lat, r.lon) < r.radiusM);
+  });
+}
+
+/** Fetch around a point if it isn't inside fresh cached coverage. */
+function ensureData(lat, lon) {
+  if (fetching) return;
+  if (!pointCovered(lat, lon)) fetchCameras(lat, lon);
+}
+
+/* After any pan/zoom, make sure the visible area is loaded — regardless of
+   follow mode: looking at an area is intent to see its cameras. Very wide
+   views (zoom < 7 ≈ multi-state) are skipped to keep Overpass queries sane;
+   the GPS-radius fetch still covers driving. */
+let panTimer = null, lastViewportEnsure = 0;
+function viewportEnsureDebounced() {
   clearTimeout(panTimer);
-  panTimer = setTimeout(() => fetchCameras(lat, lon), 1200);
+  panTimer = setTimeout(viewportEnsure, 900);
+  // Starvation guard: while follow-mode recenters the map on every GPS tick,
+  // moveend fires continuously and the debounce above would never run. Still
+  // check the viewport at most every 3s so driving zoomed-out loads the area.
+  if (Date.now() - lastViewportEnsure > 3000) viewportEnsure();
+}
+function viewportEnsure() {
+  lastViewportEnsure = Date.now();
+  if (!map || fetching) return;
+  if (map.getZoom() < 7) return;
+  const b = map.getBounds();
+  if (boundsCovered(b)) return;
+  fetchCamerasBbox(b.pad(0.25));
 }
 
 /* ============================================================
@@ -1566,10 +1656,11 @@ function fmtAge(ms) {
 }
 
 function updateAgeStat() {
+  if (fetching) return;   // the amber "fetching…" stat owns the slot until done
   if (!cache) { setStat("stAge", "none", "warn"); return; }
   const age = Date.now() - cache.fetchedAt;
   const stale = age > S.maxAgeH * 3600 * 1000;
-  setStat("stAge", fmtAge(age), stale ? "warn" : "");
+  setStat("stAge", fmtAge(age), stale ? "warn" : "good");
   updateCoverage();
 }
 
