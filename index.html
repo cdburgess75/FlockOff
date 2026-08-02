@@ -257,17 +257,10 @@
   #map.map-muted .leaflet-tile {
     filter: brightness(.75) contrast(1.1) saturate(.65) hue-rotate(10deg);
   }
-  :root[data-theme="daylight"] #map.map-muted .leaflet-tile {
+  :root[data-theme="daylight"] #map.map-muted .leaflet-tile,
+  :root[data-theme="freedom"] #map.map-muted .leaflet-tile {
     filter: saturate(1.08) contrast(1.03);
   }
-  /* Freedom: a light, uniformly blue-tinted map (desaturate to grey, then
-     sepia + hue-rotate paints a soft blue over it). Applies to ANY map style,
-     so the theme — not the map-style dropdown — drives the tint. */
-  :root[data-theme="freedom"] #map .leaflet-tile {
-    filter: brightness(1.1) saturate(0.4) contrast(0.9) sepia(0.35) hue-rotate(188deg);
-  }
-  :root[data-theme="freedom"] .leaflet-container,
-  :root[data-theme="freedom"] #map { background: #dce6f7; }
 
   /* ---------- Status bar ---------- */
   #statusBar {
@@ -329,23 +322,11 @@
   .fab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .fab.muted-on { background: var(--red); border-color: var(--red); color: #fff; }
 
-  /* ---------- Drawer (settings / about) ---------- */
-  #drawer {
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: min(340px, 92vw);
-    background: var(--panel);
-    border-left: 1px solid var(--border);
-    z-index: 1100;
-    transform: translateX(105%);
-    transition: transform .25s ease;
-    overflow-y: auto;
-    padding: 16px;
-    -webkit-overflow-scrolling: touch;
-  }
-  #drawer.open { transform: translateX(0); }
-  #drawer h2 { font-size: 17px; margin-bottom: 12px; }
-  #drawer h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 8px; }
+  /* ---------- Setup / settings (full page view) ---------- */
+  #viewSetup { background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .setup-inner { padding: 14px 14px calc(24px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; width: 100%; }
+  #viewSetup h2 { font-size: calc(17px * var(--ui-scale)); margin-bottom: 12px; }
+  #viewSetup h3 { font-size: calc(13px * var(--ui-scale)); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 8px; }
   .setting {
     background: var(--panel-2);
     border: 1px solid var(--border);
@@ -381,11 +362,6 @@
   .btn:active { filter: brightness(1.3); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   .btn.danger  { color: var(--red); border-color: var(--red); }
-  #drawerClose {
-    position: absolute; top: 10px; right: 12px;
-    background: none; border: none; color: var(--muted);
-    font-size: 24px; cursor: pointer; line-height: 1;
-  }
   #about { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
   #about p { margin-bottom: 8px; }
   #about b { color: var(--text); }
@@ -524,6 +500,88 @@
     <div class="nearby-head">Nearby cameras · nearest first</div>
     <div id="nearbyList"></div>
   </section>
+  <section class="view" id="viewSetup">
+    <div class="setup-inner">
+      <h2>Settings</h2>
+
+      <h3>Alerts</h3>
+      <div class="setting">
+        <label>Alert radius <span class="val" id="alertRadiusVal"></span></label>
+        <input type="range" id="alertRadius" min="100" max="1000" step="50">
+      </div>
+      <div class="setting">
+        <label>Only alert if camera is ahead (±60°)
+          <input type="checkbox" id="headingFilter"></label>
+      </div>
+      <div class="setting">
+        <label>Audio beep <input type="checkbox" id="chAudio" checked></label>
+      </div>
+      <div class="setting">
+        <label>Visual banner <input type="checkbox" id="chVisual" checked></label>
+      </div>
+      <div class="setting">
+        <label>Vibration <input type="checkbox" id="chHaptic" checked></label>
+      </div>
+      <div class="setting">
+        <label>Voice callouts <input type="checkbox" id="chVoice"></label>
+      </div>
+
+      <h3>Display</h3>
+      <div class="setting">
+        <label>Color theme</label>
+        <div class="tb-swatches" role="group" aria-label="Color scheme" style="margin-top:8px">
+          <button class="tb-swatch" data-key="packet" title="PacketMap" aria-label="PacketMap" style="background:linear-gradient(135deg,#05080b 0 50%,#f5942b 50% 100%)"></button>
+          <button class="tb-swatch" data-key="graphite" title="Graphite" aria-label="Graphite" style="background:linear-gradient(135deg,#0c1116 0 50%,#5b93ff 50% 100%)"></button>
+          <button class="tb-swatch" data-key="daylight" title="Daylight" aria-label="Daylight" style="background:linear-gradient(135deg,#eef1f5 0 50%,#1b6ef3 50% 100%)"></button>
+          <button class="tb-swatch" data-key="highvis" title="High-Visibility" aria-label="High-Visibility" style="background:linear-gradient(135deg,#000000 0 50%,#ffce1a 50% 100%)"></button>
+          <button class="tb-swatch" data-key="harbor" title="Harbor" aria-label="Harbor" style="background:linear-gradient(135deg,#081722 0 50%,#2bc0d6 50% 100%)"></button>
+          <button class="tb-swatch" data-key="terminal" title="Terminal" aria-label="Terminal" style="background:linear-gradient(135deg,#04070a 0 50%,#35e07f 50% 100%)"></button>
+          <button class="tb-swatch" data-key="amber" title="Amber" aria-label="Amber" style="background:linear-gradient(135deg,#0a0700 0 50%,#ffb02e 50% 100%)"></button>
+          <button class="tb-swatch" data-key="crimson" title="Crimson" aria-label="Crimson" style="background:linear-gradient(135deg,#0c0708 0 50%,#ff4d5e 50% 100%)"></button>
+          <button class="tb-swatch" data-key="violet" title="Violet" aria-label="Violet" style="background:linear-gradient(135deg,#0a0814 0 50%,#a78bfa 50% 100%)"></button>
+          <button class="tb-swatch" data-key="freedom" title="Freedom" aria-label="Freedom" style="background:linear-gradient(120deg,#b22234 0 33%,#ffffff 33% 66%,#3c3b6e 66% 100%)"></button>
+        </div>
+      </div>
+      <div class="setting">
+        <label>Map style <select id="basemapSelect" class="styleSelect"></select></label>
+      </div>
+      <div class="setting">
+        <label>Use miles / feet <input type="checkbox" id="chImperial"></label>
+      </div>
+
+      <h3>Data</h3>
+      <div class="setting">
+        <label>Fetch radius <span class="val" id="fetchRadiusVal"></span></label>
+        <input type="range" id="fetchRadius" min="2" max="30" step="1">
+      </div>
+      <div class="setting">
+        <label>Refresh cache after <span class="val" id="maxAgeVal"></span></label>
+        <input type="range" id="maxAge" min="1" max="168" step="1">
+      </div>
+      <div class="btnRow">
+        <button class="btn primary" id="btnRefresh">Refresh cameras now</button>
+      </div>
+      <div class="btnRow">
+        <button class="btn danger" id="btnClearCache">Clear cache</button>
+      </div>
+
+      <h3>About</h3>
+      <div id="about">
+        <p><b>What this is:</b> a passive privacy-awareness map of known ALPR
+        (automated license-plate reader) cameras, e.g. Flock Safety units, drawn
+        from the crowdsourced DeFlock tags in OpenStreetMap.</p>
+        <p><b>The dataset is incomplete.</b> An empty area does <b>not</b> mean
+        no cameras — mobile/trailer units and unmapped installs won't appear,
+        and mapped locations can be wrong, moved, or stale.</p>
+        <p><b>This app is passive.</b> It reads public map data and your own
+        device GPS. It transmits nothing to any camera and does not interfere
+        with any signal or system.</p>
+        <p class="muted">Data © OpenStreetMap contributors (ODbL), via the
+        Overpass API. Map tiles © OpenStreetMap, CARTO &amp; Esri.</p>
+        <p class="muted">Version <span id="appVersion">dev</span></p>
+      </div>
+    </div>
+  </section>
 </main>
 
 <nav id="tabBar" role="tablist">
@@ -536,89 +594,6 @@
   <button class="fab" id="fabMute" title="Mute alerts">🔔</button>
   <button class="fab active" id="fabFollow" title="Follow my position">◎</button>
   <button class="fab" id="fabSettings" title="Settings">⚙</button>
-</div>
-
-<div id="drawer">
-  <button id="drawerClose" aria-label="Close">×</button>
-  <h2>Settings</h2>
-
-  <h3>Alerts</h3>
-  <div class="setting">
-    <label>Alert radius <span class="val" id="alertRadiusVal"></span></label>
-    <input type="range" id="alertRadius" min="100" max="1000" step="50">
-  </div>
-  <div class="setting">
-    <label>Only alert if camera is ahead (±60°)
-      <input type="checkbox" id="headingFilter"></label>
-  </div>
-  <div class="setting">
-    <label>Audio beep <input type="checkbox" id="chAudio" checked></label>
-  </div>
-  <div class="setting">
-    <label>Visual banner <input type="checkbox" id="chVisual" checked></label>
-  </div>
-  <div class="setting">
-    <label>Vibration <input type="checkbox" id="chHaptic" checked></label>
-  </div>
-  <div class="setting">
-    <label>Voice callouts <input type="checkbox" id="chVoice"></label>
-  </div>
-
-  <h3>Display</h3>
-  <div class="setting">
-    <label>Color theme</label>
-    <div class="tb-swatches" role="group" aria-label="Color scheme" style="margin-top:8px">
-      <button class="tb-swatch" data-key="packet" title="PacketMap" aria-label="PacketMap" style="background:linear-gradient(135deg,#05080b 0 50%,#f5942b 50% 100%)"></button>
-      <button class="tb-swatch" data-key="graphite" title="Graphite" aria-label="Graphite" style="background:linear-gradient(135deg,#0c1116 0 50%,#5b93ff 50% 100%)"></button>
-      <button class="tb-swatch" data-key="daylight" title="Daylight" aria-label="Daylight" style="background:linear-gradient(135deg,#eef1f5 0 50%,#1b6ef3 50% 100%)"></button>
-      <button class="tb-swatch" data-key="highvis" title="High-Visibility" aria-label="High-Visibility" style="background:linear-gradient(135deg,#000000 0 50%,#ffce1a 50% 100%)"></button>
-      <button class="tb-swatch" data-key="harbor" title="Harbor" aria-label="Harbor" style="background:linear-gradient(135deg,#081722 0 50%,#2bc0d6 50% 100%)"></button>
-      <button class="tb-swatch" data-key="terminal" title="Terminal" aria-label="Terminal" style="background:linear-gradient(135deg,#04070a 0 50%,#35e07f 50% 100%)"></button>
-      <button class="tb-swatch" data-key="amber" title="Amber" aria-label="Amber" style="background:linear-gradient(135deg,#0a0700 0 50%,#ffb02e 50% 100%)"></button>
-      <button class="tb-swatch" data-key="crimson" title="Crimson" aria-label="Crimson" style="background:linear-gradient(135deg,#0c0708 0 50%,#ff4d5e 50% 100%)"></button>
-      <button class="tb-swatch" data-key="violet" title="Violet" aria-label="Violet" style="background:linear-gradient(135deg,#0a0814 0 50%,#a78bfa 50% 100%)"></button>
-      <button class="tb-swatch" data-key="freedom" title="Freedom" aria-label="Freedom" style="background:linear-gradient(120deg,#b22234 0 33%,#ffffff 33% 66%,#3c3b6e 66% 100%)"></button>
-    </div>
-  </div>
-  <div class="setting">
-    <label>Map style <select id="basemapSelect" class="styleSelect"></select></label>
-  </div>
-  <div class="setting">
-    <label>Use miles / feet <input type="checkbox" id="chImperial"></label>
-  </div>
-
-  <h3>Data</h3>
-  <div class="setting">
-    <label>Fetch radius <span class="val" id="fetchRadiusVal"></span></label>
-    <input type="range" id="fetchRadius" min="2" max="30" step="1">
-  </div>
-  <div class="setting">
-    <label>Refresh cache after <span class="val" id="maxAgeVal"></span></label>
-    <input type="range" id="maxAge" min="1" max="168" step="1">
-  </div>
-  <div class="btnRow">
-    <button class="btn primary" id="btnRefresh">Refresh cameras now</button>
-  </div>
-  <div class="btnRow">
-    <button class="btn danger" id="btnClearCache">Clear cache</button>
-  </div>
-
-  <h3>About</h3>
-  <div id="about">
-    <p><b>What this is:</b> a passive privacy-awareness map of known ALPR
-    (automated license-plate reader) cameras, e.g. Flock Safety units, drawn
-    from the crowdsourced DeFlock tags in OpenStreetMap.</p>
-    <p><b>The dataset is incomplete.</b> An empty area does <b>not</b> mean
-    no cameras — mobile/trailer units and unmapped installs won't appear,
-    and mapped locations can be wrong, moved, or stale. The data age shown
-    in the status bar tells you how fresh your copy is.</p>
-    <p><b>This app is passive.</b> It reads public map data and your own
-    device GPS. It transmits nothing to any camera and does not interfere
-    with any signal or system.</p>
-    <p class="muted">Data © OpenStreetMap contributors (ODbL), via the
-    Overpass API. Map tiles © OpenStreetMap, CARTO &amp; Esri.</p>
-    <p class="muted">Version <span id="appVersion">dev</span></p>
-  </div>
 </div>
 
 <div id="emptyState">
@@ -1405,22 +1380,18 @@ function renderNearby() {
   });
 }
 function setView(name) {
-  if (name === "setup") {
-    document.getElementById("drawer").classList.add("open");
-    document.getElementById("tabSetup").classList.add("on");
-    return;
-  }
   currentView = name;
   const onMap = name === "map";
   document.getElementById("viewMap").classList.toggle("on", onMap);
-  document.getElementById("viewNearby").classList.toggle("on", !onMap);
+  document.getElementById("viewNearby").classList.toggle("on", name === "nearby");
+  document.getElementById("viewSetup").classList.toggle("on", name === "setup");
   document.getElementById("tabMap").classList.toggle("on", onMap);
-  document.getElementById("tabNearby").classList.toggle("on", !onMap);
-  document.getElementById("tabSetup").classList.remove("on");
+  document.getElementById("tabNearby").classList.toggle("on", name === "nearby");
+  document.getElementById("tabSetup").classList.toggle("on", name === "setup");
   const fabs = document.querySelector(".fabs");
   if (fabs) fabs.style.display = onMap ? "" : "none";
   if (onMap && map) setTimeout(function () { map.invalidateSize(); }, 40);
-  if (!onMap) renderNearby();
+  if (name === "nearby") renderNearby();
 }
 
 function setMuted(on) {
@@ -1439,13 +1410,7 @@ function bindUI() {
     if (!S.muted) beepUnlockOnly();
     setMuted(!S.muted);
   };
-  document.getElementById("fabSettings").onclick = () =>
-    document.getElementById("drawer").classList.add("open");
-  document.getElementById("drawerClose").onclick = () => {
-    document.getElementById("drawer").classList.remove("open");
-    document.getElementById("tabSetup").classList.remove("on");
-    document.getElementById(currentView === "nearby" ? "tabNearby" : "tabMap").classList.add("on");
-  };
+  document.getElementById("fabSettings").onclick = () => setView("setup");
 
   // Bottom tab bar
   document.getElementById("tabMap").onclick = () => setView("map");
@@ -1523,7 +1488,7 @@ function bindUI() {
   document.getElementById("btnRefresh").onclick = () => {
     const c = pos ? { lat: pos.lat, lng: pos.lon } : map.getCenter();
     fetchCameras(c.lat, c.lng);
-    document.getElementById("drawer").classList.remove("open");
+    setView("map");
   };
 
   document.getElementById("btnClearCache").onclick = () => {
