@@ -90,6 +90,14 @@
   /* The logo (and its version) go red; everything else stays blue. */
   :root[data-theme="freedom"] .brand,
   :root[data-theme="freedom"] .hd-brand .ver { color: var(--red); }
+  :root[data-theme="nightwatch"] {
+    /* Freedom after dark: deep navy ground, blue accents, red logo. */
+    --bg:#060b18; --panel:#0d1526; --panel-2:#152037; --border:#26365c;
+    --text:#e7eefc; --muted:#93a8d4; --accent:#5b8cff; --on-accent:#04091a;
+    --amber:#f2b03a; --red:#ff5a6a; --green:#3ad39a;
+  }
+  :root[data-theme="nightwatch"] .brand,
+  :root[data-theme="nightwatch"] .hd-brand .ver { color: var(--red); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
   body {
@@ -269,6 +277,13 @@
   }
   :root[data-theme="freedom"] .leaflet-container,
   :root[data-theme="freedom"] #map { background: #dce6f7; }
+  /* Nightwatch: the same blue wash, taken dark — dim the tiles hard, then
+     sepia + hue-rotate paints deep blue over the greys. Any Map style. */
+  :root[data-theme="nightwatch"] #map .leaflet-tile {
+    filter: brightness(0.55) saturate(0.55) contrast(1.1) sepia(0.5) hue-rotate(185deg);
+  }
+  :root[data-theme="nightwatch"] .leaflet-container,
+  :root[data-theme="nightwatch"] #map { background: #0a1428; }
 
   /* ---------- Status bar ---------- */
   #statusBar {
@@ -587,6 +602,7 @@
           <button class="tb-swatch" data-key="crimson" title="Crimson" aria-label="Crimson" style="background:linear-gradient(135deg,#0c0708 0 50%,#ff4d5e 50% 100%)"></button>
           <button class="tb-swatch" data-key="violet" title="Violet" aria-label="Violet" style="background:linear-gradient(135deg,#0a0814 0 50%,#a78bfa 50% 100%)"></button>
           <button class="tb-swatch" data-key="freedom" title="Freedom" aria-label="Freedom" style="background:linear-gradient(120deg,#b22234 0 33%,#ffffff 33% 66%,#3c3b6e 66% 100%)"></button>
+          <button class="tb-swatch" data-key="nightwatch" title="Nightwatch" aria-label="Nightwatch" style="background:linear-gradient(120deg,#b22234 0 33%,#0d1526 33% 66%,#5b8cff 66% 100%)"></button>
         </div>
       </div>
       <div class="setting">
@@ -1526,8 +1542,8 @@ function setFollow(on) {
   if (on && pos) map.panTo([pos.lat, pos.lon]);
 }
 
-const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", freedom: "Freedom", daylight: "Daylight", highvis: "High-Visibility" };
-const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "freedom", "daylight", "highvis"];
+const THEMES = { graphite: "Graphite", packet: "PacketMap", terminal: "Terminal", amber: "Amber", harbor: "Harbor", violet: "Violet", crimson: "Crimson", freedom: "Freedom", nightwatch: "Nightwatch", daylight: "Daylight", highvis: "High-Visibility" };
+const THEME_ORDER = ["graphite", "packet", "terminal", "amber", "harbor", "violet", "crimson", "freedom", "nightwatch", "daylight", "highvis"];
 function setTheme(key) {
   if (!THEMES[key]) key = "packet";
   S.theme = key;
