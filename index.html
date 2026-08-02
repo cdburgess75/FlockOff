@@ -257,10 +257,18 @@
   #map.map-muted .leaflet-tile {
     filter: brightness(.75) contrast(1.1) saturate(.65) hue-rotate(10deg);
   }
-  :root[data-theme="daylight"] #map.map-muted .leaflet-tile,
-  :root[data-theme="freedom"] #map.map-muted .leaflet-tile {
+  :root[data-theme="daylight"] #map.map-muted .leaflet-tile {
     filter: saturate(1.08) contrast(1.03);
   }
+  /* Freedom: a light, uniformly blue-tinted map — desaturate toward grey,
+     then sepia + hue-rotate washes a soft blue over it. Applies on ANY map
+     style (not just the muted basemap) so the blue shows regardless of the
+     selected Map style. */
+  :root[data-theme="freedom"] #map .leaflet-tile {
+    filter: brightness(1.1) saturate(0.4) contrast(0.9) sepia(0.35) hue-rotate(188deg);
+  }
+  :root[data-theme="freedom"] .leaflet-container,
+  :root[data-theme="freedom"] #map { background: #dce6f7; }
 
   /* ---------- Status bar ---------- */
   #statusBar {
