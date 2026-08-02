@@ -592,6 +592,23 @@
     <div class="setup-inner">
       <h2>Settings</h2>
 
+      <h3>Layers</h3>
+      <div class="setting">
+        <label>ALPR plate readers <input type="checkbox" id="lyAlpr"></label>
+      </div>
+      <div class="setting">
+        <label>Gunshot detectors (acoustic) <input type="checkbox" id="lyGunshot"></label>
+      </div>
+      <div class="setting">
+        <label>Speed cameras <input type="checkbox" id="lySpeed"></label>
+      </div>
+      <div class="setting">
+        <label>Red-light / traffic cams <input type="checkbox" id="lyRedlight"></label>
+      </div>
+      <div class="setting">
+        <label>General surveillance (CCTV) <input type="checkbox" id="lyCctv"></label>
+      </div>
+
       <h3>Alerts</h3>
       <div class="setting">
         <label>Alert radius <span class="val" id="alertRadiusVal"></span></label>
@@ -738,6 +755,9 @@ const DEFAULTS = {
   basemap: "osm_muted",  // selected map style — muted OSM (PacketMap-style)
   theme: "graphite",     // color scheme (see THEMES)
   uiscale: 1,            // text size step (1..3), driven by the AA button
+  // Detector layers. All selectable (it's public OSM data); ALPR + acoustic
+  // on by default, the rest opt-in.
+  layers: { alpr: true, gunshot: true, speed: false, redlight: false, cctv: false },
 };
 
 let S = loadSettings();
@@ -775,8 +795,12 @@ try {
 } catch (e) {}
 
 function loadSettings() {
-  try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}")); }
-  catch (e) { return Object.assign({}, DEFAULTS); }
+  let s;
+  try { s = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}")); }
+  catch (e) { s = Object.assign({}, DEFAULTS); }
+  // The shallow merge above would drop layer keys added after a user saved.
+  s.layers = Object.assign({}, DEFAULTS.layers, s.layers || {});
+  return s;
 }
 function saveSettings() {
   try { localStorage.setItem(LS_SETTINGS, JSON.stringify(S)); } catch (e) {}
@@ -786,6 +810,43 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
+
+/* Detector kinds. `q` are Overpass node selectors (the area clause is
+   appended); `short` feeds the banner/popup/nearby labels; `spoken` feeds
+   voice callouts. All of it is public, crowdsourced OSM data. */
+const KINDS = {
+  alpr:     { label: "ALPR plate readers", short: "ALPR camera", spoken: "License plate reader",
+              q: ['node["man_made"="surveillance"]["surveillance:type"="ALPR"]',
+                  'node["surveillance:type"="ALPR"]'] },
+  gunshot:  { label: "Gunshot detectors (acoustic)", short: "Gunshot detector", spoken: "Gunshot detector",
+              q: ['node["man_made"="surveillance"]["surveillance:type"="gunshot_detector"]'] },
+  speed:    { label: "Speed cameras", short: "Speed camera", spoken: "Speed camera",
+              q: ['node["highway"="speed_camera"]'] },
+  redlight: { label: "Red-light / traffic cams", short: "Traffic-enforcement camera", spoken: "Red light camera",
+              q: ['node["man_made"="surveillance"]["surveillance:zone"="traffic"]'] },
+  cctv:     { label: "General surveillance (CCTV)", short: "Surveillance camera", spoken: "Surveillance camera",
+              q: ['node["man_made"="surveillance"]["surveillance:type"="camera"]'] },
+};
+
+function classifyKind(tags) {
+  const t = tags || {};
+  if ((t["surveillance:type"] || "").toUpperCase() === "ALPR") return "alpr";
+  if (t["surveillance:type"] === "gunshot_detector") return "gunshot";
+  if (t["highway"] === "speed_camera") return "speed";
+  if (t["surveillance:zone"] === "traffic") return "redlight";
+  return "cctv";
+}
+
+/* One Overpass union covering every enabled layer, for the given area
+   clause — "(around:R,lat,lon)" or "(s,w,n,e)". */
+function buildQuery(area) {
+  const parts = [];
+  for (const k in KINDS) {
+    if (!S.layers[k]) continue;
+    for (const sel of KINDS[k].q) parts.push("  " + sel + area + ";");
+  }
+  return "[out:json][timeout:25];\n(\n" + parts.join("\n") + "\n);\nout body;";
+}
 
 /* ============================================================
    State
@@ -1001,6 +1062,7 @@ function normalize(el) {
   const t = el.tags || {};
   return {
     id: el.id,
+    kind: classifyKind(t),
     lat: el.lat,
     lon: el.lon,
     operator: t.operator || null,
@@ -1011,12 +1073,7 @@ function normalize(el) {
 }
 
 function overpassQuery(lat, lon, radiusM) {
-  return `[out:json][timeout:25];
-(
-  node["surveillance:type"="ALPR"](around:${radiusM},${lat},${lon});
-  node["man_made"="surveillance"]["surveillance:type"="ALPR"](around:${radiusM},${lat},${lon});
-);
-out body;`;
+  return buildQuery(`(around:${radiusM},${lat},${lon})`);
 }
 
 /* Run one Overpass query against the mirror list; resolves to normalized
@@ -1106,12 +1163,7 @@ async function fetchCamerasBbox(b) {
   setStat("stAge", "fetching…", "warn");
   const s = b.getSouth(), w = b.getWest(), n = b.getNorth(), e = b.getEast();
   const box = s.toFixed(5) + "," + w.toFixed(5) + "," + n.toFixed(5) + "," + e.toFixed(5);
-  const q = `[out:json][timeout:25];
-(
-  node["surveillance:type"="ALPR"](${box});
-  node["man_made"="surveillance"]["surveillance:type"="ALPR"](${box});
-);
-out body;`;
+  const q = buildQuery(`(${box})`);
   try {
     const cams = await runOverpass(q);
     fetching = false;   // before merge, so updateAgeStat paints the green age
@@ -1178,7 +1230,8 @@ function viewportEnsure() {
    Camera markers
    ============================================================ */
 function applyCameras(cams) {
-  cameras = cams || [];
+  // Only enabled layers are shown/alerted; pre-layers caches lack `kind`.
+  cameras = (cams || []).filter(c => S.layers[c.kind || "alpr"]);
   // Remove markers no longer present
   const ids = new Set(cameras.map(c => c.id));
   for (const [id, m] of camMarkers) {
@@ -1189,7 +1242,7 @@ function applyCameras(cams) {
   }
   for (const cam of cameras) {
     if (!camMarkers.has(cam.id)) {
-      const m = L.marker([cam.lat, cam.lon], { icon: pinIcon(), keyboard: false })
+      const m = L.marker([cam.lat, cam.lon], { icon: pinIcon(cam.kind), keyboard: false })
         .bindPopup(popupHtml(cam))
         .addTo(map);
       camMarkers.set(cam.id, m);
@@ -1226,10 +1279,23 @@ function coneLatLngs(cam) {
   return pts;
 }
 
-/* Teardrop camera pin. The teardrop + lens use currentColor, so the state
-   classes (.near/.alert) recolor the whole pin via CSS; the camera body stays
-   white. In the alert state CSS swaps the camera glyph for a "!" and pulses. */
-function pinIcon() {
+/* Teardrop pin. The teardrop + accents use currentColor, so the state
+   classes (.near/.alert) recolor the whole pin via CSS; the glyph art stays
+   white. In the alert state CSS swaps the glyph for a "!" and pulses.
+   Each detector kind gets its own glyph so the map reads at a glance. */
+const PIN_GLYPHS = {
+  // ALPR: camera body + lens
+  alpr: '<rect x="14.6" y="9.4" width="6.8" height="3.4" rx="1.2" fill="#fff"/><rect x="10" y="11.4" width="16" height="10.6" rx="2.2" fill="#fff"/><circle cx="18" cy="16.7" r="3.4" fill="currentColor"/><circle cx="18" cy="16.7" r="1.6" fill="#fff"/>',
+  // Speed: speedometer dial + needle
+  speed: '<circle cx="18" cy="16.5" r="8.5" fill="#fff"/><path d="M18 16.5 L23 11.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="18" cy="16.5" r="2" fill="currentColor"/>',
+  // Red-light: traffic signal, three lamps
+  redlight: '<rect x="14" y="8.5" width="8" height="16.5" rx="2.6" fill="#fff"/><circle cx="18" cy="12.2" r="1.9" fill="currentColor"/><circle cx="18" cy="16.7" r="1.9" fill="currentColor"/><circle cx="18" cy="21.2" r="1.9" fill="currentColor"/>',
+  // CCTV: wall-mount box camera
+  cctv: '<rect x="8.5" y="12" width="14" height="8" rx="2" fill="#fff" transform="rotate(-14 15.5 16)"/><circle cx="24.5" cy="13.5" r="2.6" fill="#fff"/><path d="M13 22 L13 26 L20 26" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+  // Gunshot: mic dot + sound arcs
+  gunshot: '<circle cx="14" cy="16.5" r="3" fill="#fff"/><path d="M18.5 11.5 A7.4 7.4 0 0 1 18.5 21.5 M22 8.5 A11.8 11.8 0 0 1 22 24.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+};
+function pinIcon(kind) {
   return L.divIcon({
     className: "campin",
     iconSize: [34, 44],
@@ -1238,7 +1304,7 @@ function pinIcon() {
     html:
       '<svg viewBox="0 0 36 46">' +
       '<path d="M18 1C9.7 1 3 7.7 3 16c0 9.8 15 29 15 29s15-19.2 15-29C33 7.7 26.3 1 18 1z" fill="currentColor" stroke="rgba(0,0,0,.28)" stroke-width="1"/>' +
-      '<g class="g-cam"><rect x="14.6" y="9.4" width="6.8" height="3.4" rx="1.2" fill="#fff"/><rect x="10" y="11.4" width="16" height="10.6" rx="2.2" fill="#fff"/><circle cx="18" cy="16.7" r="3.4" fill="currentColor"/><circle cx="18" cy="16.7" r="1.6" fill="#fff"/></g>' +
+      '<g class="g-cam">' + (PIN_GLYPHS[kind] || PIN_GLYPHS.alpr) + '</g>' +
       '<text class="g-warn" x="18" y="22" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">!</text>' +
       '</svg>',
   });
@@ -1247,7 +1313,7 @@ function pinIcon() {
 function popupHtml(cam) {
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   const rows = [];
-  rows.push("<b>ALPR camera</b>");
+  rows.push("<b>" + (KINDS[cam.kind || "alpr"] || KINDS.alpr).short + "</b>");
   if (cam.operator) rows.push("Operator: " + esc(cam.operator));
   if (cam.brand) rows.push("Brand: " + esc(cam.brand));
   if (cam.direction != null) rows.push("Facing: " + cam.direction + "&deg; (" + compass(cam.direction) + ")");
@@ -1415,15 +1481,16 @@ function primeSpeech() {
 }
 
 function calloutText(cam, dist) {
-  return "License plate reader ahead, " + fmtDistSpoken(dist);
+  return (KINDS[cam.kind || "alpr"] || KINDS.alpr).spoken + " ahead, " + fmtDistSpoken(dist);
 }
 
 function updateBanner() {
   const el = document.getElementById("alertBanner");
   const show = S.chVisual && !S.muted && nearest && nearest.dist <= S.alertRadiusM;
   if (show) {
-    const op = nearest.cam.operator ? escHtml(nearest.cam.operator) : "ALPR camera";
-    el.innerHTML = "⚠ ALPR camera · " + fmtDist(nearest.dist) + " away" +
+    const short = (KINDS[nearest.cam.kind || "alpr"] || KINDS.alpr).short;
+    const op = nearest.cam.operator ? escHtml(nearest.cam.operator) : short;
+    el.innerHTML = "⚠ " + short + " · " + fmtDist(nearest.dist) + " away" +
       "<small>" + op + " · tap to view</small>";
     el.classList.add("show");
   } else {
@@ -1633,8 +1700,9 @@ function renderNearby() {
     .sort(function (a, b) { return a.d - b.d; }).slice(0, 60);
   list.innerHTML = items.map(function (it) {
     const c = it.c;
-    const op = c.operator ? escHtml(c.operator) : "ALPR camera";
-    const bits = [];
+    const short = (KINDS[c.kind || "alpr"] || KINDS.alpr).short;
+    const op = c.operator ? escHtml(c.operator) : short;
+    const bits = [short];
     if (c.brand) bits.push(escHtml(c.brand));
     if (c.direction != null) bits.push("Faces " + compass(c.direction));
     return '<div class="nearby-item" data-lat="' + c.lat + '" data-lon="' + c.lon + '">' +
@@ -1749,6 +1817,32 @@ function bindUI() {
   bindCheck("chAudio", "chAudio");
   bindCheck("chVisual", "chVisual");
   bindCheck("chHaptic", "chHaptic");
+
+  // Detector layers. Turning one ON invalidates coverage (past fetches only
+  // queried the layers enabled at the time), so wipe regions and refetch;
+  // turning one OFF just filters the display.
+  const bindLayer = (id, kind) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.checked = !!S.layers[kind];
+    input.onchange = () => {
+      S.layers[kind] = input.checked;
+      saveSettings();
+      if (cache) applyCameras(cache.cameras);
+      if (input.checked) {
+        if (cache) { cache.regions = []; saveCache(cache); }
+        lastViewportEnsure = 0;
+        viewportEnsure();
+        if (pos) ensureData(pos.lat, pos.lon);
+      }
+      updateBanner();
+    };
+  };
+  bindLayer("lyAlpr", "alpr");
+  bindLayer("lyGunshot", "gunshot");
+  bindLayer("lySpeed", "speed");
+  bindLayer("lyRedlight", "redlight");
+  bindLayer("lyCctv", "cctv");
 
   // Voice: confirm out loud when enabled (that tap also unlocks TTS).
   const voiceInput = document.getElementById("chVoice");
