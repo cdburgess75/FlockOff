@@ -36,79 +36,81 @@
     --amber: #f5a623;
     --red: #ff5b52;
     --green: #37d39b;
+    --pin: #8b98a5;  /* camera-pin fill; per-theme so it never collides with
+                        the amber "approaching" or red "alert" states */
     --ui-scale: 1;   /* the "AA" button steps this up for readability */
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
   }
   html[data-uiscale="2"] { --ui-scale: 1.18; }
   html[data-uiscale="3"] { --ui-scale: 1.36; }
   :root[data-theme="graphite"] {
-    --bg:#0c1116; --panel:#161d26; --panel-2:#1f2937; --border:#33404f;
+    --bg:#0c1116; --panel:#161d26; --panel-2:#1f2937; --border:#3b4a5d;
     --text:#f3f7fb; --muted:#aebacb; --accent:#5b93ff; --on-accent:#04101f;
-    --amber:#f6a723; --red:#ff5b52; --green:#37c871;
+    --amber:#f6a723; --red:#ff5b52; --green:#37c871; --pin:#5b93ff;
   }
   :root[data-theme="daylight"] {
-    --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6fa; --border: #cdd7e2;
+    --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6fa; --border: #bfccdb;
     --text: #101827; --muted: #55637a; --accent: #1b6ef3; --on-accent: #ffffff;
-    --amber: #a85708; --red: #c81f2c; --green: #15803d;
+    --amber: #a85708; --red: #c81f2c; --green: #15803d; --pin: #1b6ef3;
   }
   :root[data-theme="highvis"] {
     --bg: #000000; --panel: #0e0e0e; --panel-2: #1b1b1b; --border: #5a5a5a;
     --text: #ffffff; --muted: #dcdcdc; --accent: #ffce1a; --on-accent: #000000;
-    --amber: #ff9500; --red: #ff3b30; --green: #34d95b;
+    --amber: #ff9500; --red: #ff3b30; --green: #34d95b; --pin: #ffce1a;
   }
   :root[data-theme="harbor"] {
-    --bg: #081722; --panel: #0f2532; --panel-2: #163444; --border: #285067;
+    --bg: #081722; --panel: #0f2532; --panel-2: #163444; --border: #2f5e79;
     --text: #e9f3f8; --muted: #a2bece; --accent: #2bc0d6; --on-accent: #032027;
-    --amber: #f2b03a; --red: #ff6a63; --green: #2fd39a;
+    --amber: #f2b03a; --red: #ff6a63; --green: #2fd39a; --pin: #2bc0d6;
   }
   :root[data-theme="terminal"] {
-    --bg:#04070a; --panel:#0a1410; --panel-2:#0f2018; --border:#1f3a2c;
-    --text:#d6f5e2; --muted:#6fae8c; --accent:#35e07f; --on-accent:#04140b;
-    --amber:#f5c518; --red:#ff5b52; --green:#35e07f;
+    --bg:#04070a; --panel:#0a1410; --panel-2:#0f2018; --border:#28503b;
+    --text:#d6f5e2; --muted:#82bd9c; --accent:#35e07f; --on-accent:#04140b;
+    --amber:#f5c518; --red:#ff5b52; --green:#35e07f; --pin:#35e07f;
   }
   :root[data-theme="amber"] {
-    --bg:#0a0700; --panel:#161005; --panel-2:#20180a; --border:#3d2f12;
-    --text:#ffe9c2; --muted:#c99a5a; --accent:#ffb02e; --on-accent:#180f00;
-    --amber:#ffb02e; --red:#ff6a4d; --green:#7fd66a;
+    --bg:#0a0700; --panel:#161005; --panel-2:#20180a; --border:#4c3a17;
+    --text:#ffe9c2; --muted:#d4a763; --accent:#ffb02e; --on-accent:#180f00;
+    --amber:#ffb02e; --red:#ff6a4d; --green:#7fd66a; --pin:#e6d3ac;
   }
   :root[data-theme="crimson"] {
-    --bg:#0c0708; --panel:#170d0f; --panel-2:#221316; --border:#3d2126;
+    --bg:#0c0708; --panel:#170d0f; --panel-2:#221316; --border:#4c2a30;
     --text:#f5e6e8; --muted:#c08e95; --accent:#ff4d5e; --on-accent:#1a0508;
-    --amber:#f5a623; --red:#ff4d5e; --green:#37c871;
+    --amber:#f5a623; --red:#ff4d5e; --green:#37c871; --pin:#c08e95;
   }
   :root[data-theme="violet"] {
-    --bg:#0a0814; --panel:#141126; --panel-2:#1d1836; --border:#332b57;
+    --bg:#0a0814; --panel:#141126; --panel-2:#1d1836; --border:#3e356a;
     --text:#ece9f7; --muted:#a99fce; --accent:#a78bfa; --on-accent:#0d0820;
-    --amber:#f5a623; --red:#ff5b6e; --green:#42d19a;
+    --amber:#f5a623; --red:#ff5b6e; --green:#42d19a; --pin:#a78bfa;
   }
   :root[data-theme="freedom"] {
     /* Red/white/blue, light: white ground, blue text, red logo + alerts. */
-    --bg:#ffffff; --panel:#f3f6fc; --panel-2:#e9eff8; --border:#ccd8ec;
+    --bg:#ffffff; --panel:#f3f6fc; --panel-2:#e9eff8; --border:#bccdea;
     --text:#153a86; --muted:#47609f; --accent:#1e50d8; --on-accent:#ffffff;
-    --amber:#b45309; --red:#c8102e; --green:#157a3c;
+    --amber:#b45309; --red:#c8102e; --green:#157a3c; --pin:#1e50d8;
   }
   /* The logo (and its version) go red; everything else stays blue. */
   :root[data-theme="freedom"] .brand,
   :root[data-theme="freedom"] .hd-brand .ver { color: var(--red); }
   :root[data-theme="nightwatch"] {
     /* Freedom after dark: deep navy ground, blue accents, red logo. */
-    --bg:#060b18; --panel:#0d1526; --panel-2:#152037; --border:#26365c;
+    --bg:#060b18; --panel:#0d1526; --panel-2:#152037; --border:#2f4372;
     --text:#e7eefc; --muted:#93a8d4; --accent:#5b8cff; --on-accent:#04091a;
-    --amber:#f2b03a; --red:#ff5a6a; --green:#3ad39a;
+    --amber:#f2b03a; --red:#ff5a6a; --green:#3ad39a; --pin:#5b8cff;
   }
   :root[data-theme="nightwatch"] .brand,
   :root[data-theme="nightwatch"] .hd-brand .ver { color: var(--red); }
   :root[data-theme="liberty"] {
     /* Light, red-forward: white ground, dark text, red logo + accents. */
-    --bg:#ffffff; --panel:#f2f4f7; --panel-2:#e8ebf0; --border:#d4dae2;
+    --bg:#ffffff; --panel:#f2f4f7; --panel-2:#e8ebf0; --border:#c5cdd8;
     --text:#1a1f2b; --muted:#6b7480; --accent:#d21f2e; --on-accent:#ffffff;
-    --amber:#b45309; --red:#d21f2e; --green:#157a3c;
+    --amber:#b45309; --red:#d21f2e; --green:#157a3c; --pin:#1c2740;
   }
   :root[data-theme="watchman"] {
     /* Dark navy, red-forward: deep slate ground, white text, red logo. */
-    --bg:#0e1420; --panel:#172033; --panel-2:#1f2a40; --border:#2c3a54;
+    --bg:#0e1420; --panel:#172033; --panel-2:#1f2a40; --border:#374a6b;
     --text:#eef2f8; --muted:#93a0b4; --accent:#ff4d5a; --on-accent:#ffffff;
-    --amber:#f2b03a; --red:#ff4d5a; --green:#3ad39a;
+    --amber:#f2b03a; --red:#ff4d5a; --green:#3ad39a; --pin:#5b8cff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
@@ -212,22 +214,55 @@
   :root[data-theme="highvis"] #statusBar,
   :root[data-theme="highvis"] #coverageNote { border-top-width: 2px; }
 
-  /* ---------- Alert banner ---------- */
+  /* ---------- Alert card (floats over the map, above the tab bar) ---------- */
   #alertBanner {
     display: none;
+    position: fixed;
+    left: 14px; right: 14px;
+    bottom: calc(70px + 14px + env(safe-area-inset-bottom));
+    z-index: 1150;
     background: var(--red);
     color: #fff;
     font-weight: 800;
-    font-size: calc(15px * var(--ui-scale));
-    letter-spacing: .04em;
+    font-size: calc(16px * var(--ui-scale));
+    letter-spacing: .03em;
     text-transform: uppercase;
-    padding: 12px 14px;
+    padding: 13px 16px;
     text-align: center;
-    flex: 0 0 auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 26px rgba(0,0,0,.35);
+    cursor: pointer;
     animation: bannerPulse 1s ease-in-out infinite alternate;
   }
   #alertBanner.show { display: block; }
+  #alertBanner small {
+    display: block;
+    font-weight: 600;
+    font-size: calc(11.5px * var(--ui-scale));
+    letter-spacing: .07em;
+    opacity: .92;
+    margin-top: 3px;
+  }
+  body.fullmap #alertBanner { bottom: calc(14px + env(safe-area-inset-bottom)); }
   @keyframes bannerPulse { from { filter: brightness(1); } to { filter: brightness(1.25); } }
+  /* While the card is up, lift the FAB column clear of it. */
+  body.alerting .fabs { bottom: calc(160px + env(safe-area-inset-bottom)); }
+  body.alerting.fullmap .fabs { bottom: calc(104px + env(safe-area-inset-bottom)); }
+
+  /* ---------- Teardrop camera pins ---------- */
+  .campin { color: var(--pin); }
+  .campin.near  { color: var(--amber); }
+  .campin.alert { color: var(--red); }
+  .campin svg {
+    width: 100%; height: 100%; display: block;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.35));
+    transform-origin: 50% 100%;
+  }
+  .campin.alert svg { animation: pinPulse .8s ease-in-out infinite alternate; }
+  .campin .g-warn { display: none; }
+  .campin.alert .g-cam { display: none; }
+  .campin.alert .g-warn { display: block; }
+  @keyframes pinPulse { from { transform: scale(1); } to { transform: scale(1.14); } }
 
   /* ---------- Views (map / nearby) ---------- */
   #views { flex: 1 1 auto; min-height: 0; position: relative; }
@@ -263,7 +298,8 @@
     padding: 8px 4px 9px; font-size: calc(10.5px * var(--ui-scale));
     letter-spacing: .08em; text-transform: uppercase;
   }
-  #tabBar .tab .ti { font-size: calc(19px * var(--ui-scale)); line-height: 1; }
+  #tabBar .tab .ti { line-height: 1; }
+  #tabBar .tab .ti svg { width: calc(22px * var(--ui-scale)); height: calc(22px * var(--ui-scale)); display: block; }
   #tabBar .tab.on { color: var(--accent); }
   #tabBar .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 
@@ -679,9 +715,9 @@
 </main>
 
 <nav id="tabBar" role="tablist">
-  <button class="tab on" id="tabMap" type="button" data-view="map"><span class="ti">⌖</span><span class="tl">Map</span></button>
-  <button class="tab" id="tabNearby" type="button" data-view="nearby"><span class="ti">≣</span><span class="tl">Nearby</span></button>
-  <button class="tab" id="tabSetup" type="button" data-view="setup"><span class="ti">⚙</span><span class="tl">Setup</span></button>
+  <button class="tab on" id="tabMap" type="button" data-view="map"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><span class="tl">Map</span></button>
+  <button class="tab" id="tabNearby" type="button" data-view="nearby"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 4 8 5.5H5a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7.5a2 2 0 0 0-2-2h-3L14.6 4H9.4zM12 17.2a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg></span><span class="tl">Nearby</span></button>
+  <button class="tab" id="tabSetup" type="button" data-view="setup"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.1-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.3 7.3 0 0 0-1.73-1l-.38-2.65A.5.5 0 0 0 13.93 2h-4a.5.5 0 0 0-.5.43L9.06 5.08a7.3 7.3 0 0 0-1.73 1l-2.48-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .13.64L4.46 11c-.04.33-.06.66-.06 1s.02.67.06 1l-2.1 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.38.31.6.22l2.49-1c.53.41 1.11.75 1.73 1l.38 2.65c.04.25.25.43.5.43h4c.25 0 .46-.18.5-.43l.37-2.65a7.3 7.3 0 0 0 1.73-1l2.49 1c.22.09.48 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM11.93 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></span><span class="tl">Setup</span></button>
 </nav>
 
 <div class="fabs">
@@ -965,7 +1001,7 @@ const OVERPASS_ENDPOINTS = [
    ============================================================ */
 let map, userMarker, accCircle, baseLayer;
 let cameras = [];            // normalized camera objects
-let camMarkers = new Map();  // id -> L.CircleMarker
+let camMarkers = new Map();  // id -> L.Marker (teardrop pin divIcon)
 let cache = loadCache();     // { cameras, fetchedAt, center:{lat,lon}, radiusM }
 let pos = null;              // { lat, lon, accuracy, heading, speed }
 let nearest = null;          // { cam, dist }
@@ -1254,7 +1290,7 @@ function applyCameras(cams) {
   }
   for (const cam of cameras) {
     if (!camMarkers.has(cam.id)) {
-      const m = L.circleMarker([cam.lat, cam.lon], markerStyle("far"))
+      const m = L.marker([cam.lat, cam.lon], { icon: pinIcon(), keyboard: false })
         .bindPopup(popupHtml(cam))
         .addTo(map);
       camMarkers.set(cam.id, m);
@@ -1264,11 +1300,22 @@ function applyCameras(cams) {
   checkProximity();
 }
 
-function markerStyle(state) {
-  const base = { radius: 8, weight: 2, fillOpacity: 0.85 };
-  if (state === "alert") return Object.assign(base, { color: "#fff", fillColor: "#f85149", radius: 10 });
-  if (state === "near")  return Object.assign(base, { color: "#fff", fillColor: "#d29922" });
-  return Object.assign(base, { color: "#aaa", fillColor: "#6e7681" });
+/* Teardrop camera pin. The teardrop + lens use currentColor, so the state
+   classes (.near/.alert) recolor the whole pin via CSS; the camera body stays
+   white. In the alert state CSS swaps the camera glyph for a "!" and pulses. */
+function pinIcon() {
+  return L.divIcon({
+    className: "campin",
+    iconSize: [34, 44],
+    iconAnchor: [17, 43],
+    popupAnchor: [0, -38],
+    html:
+      '<svg viewBox="0 0 36 46">' +
+      '<path d="M18 1C9.7 1 3 7.7 3 16c0 9.8 15 29 15 29s15-19.2 15-29C33 7.7 26.3 1 18 1z" fill="currentColor" stroke="rgba(0,0,0,.28)" stroke-width="1"/>' +
+      '<g class="g-cam"><rect x="14.6" y="9.4" width="6.8" height="3.4" rx="1.2" fill="#fff"/><rect x="10" y="11.4" width="16" height="10.6" rx="2.2" fill="#fff"/><circle cx="18" cy="16.7" r="3.4" fill="currentColor"/><circle cx="18" cy="16.7" r="1.6" fill="#fff"/></g>' +
+      '<text class="g-warn" x="18" y="22" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">!</text>' +
+      '</svg>',
+  });
 }
 
 function popupHtml(cam) {
@@ -1373,7 +1420,11 @@ function updateMarkerColors() {
       if (d <= threshold) state = "alert";
       else if (d <= threshold * 2) state = "near";
     }
-    m.setStyle(markerStyle(state));
+    const el = m.getElement();
+    if (el) {
+      el.classList.toggle("alert", state === "alert");
+      el.classList.toggle("near", state === "near");
+    }
   }
 }
 
@@ -1442,12 +1493,14 @@ function updateBanner() {
   const el = document.getElementById("alertBanner");
   const show = S.chVisual && !S.muted && nearest && nearest.dist <= S.alertRadiusM;
   if (show) {
-    const op = nearest.cam.operator ? " — " + nearest.cam.operator : "";
-    el.textContent = "⚠ ALPR camera " + fmtDist(nearest.dist) + " away" + op;
+    const op = nearest.cam.operator ? escHtml(nearest.cam.operator) : "ALPR camera";
+    el.innerHTML = "⚠ ALPR camera · " + fmtDist(nearest.dist) + " away" +
+      "<small>" + op + " · tap to view</small>";
     el.classList.add("show");
   } else {
     el.classList.remove("show");
   }
+  document.body.classList.toggle("alerting", !!show);
 }
 
 /* ============================================================
@@ -1718,6 +1771,14 @@ function bindUI() {
   document.getElementById("fabSettings").onclick = () => setView("setup");
   document.getElementById("fabFull").onclick = () => setFullMap(!document.body.classList.contains("fullmap"));
   document.getElementById("coverageNote").onclick = hideCoverageNote;
+  // Alert card: tap to jump to the camera that's alerting.
+  document.getElementById("alertBanner").onclick = () => {
+    if (!nearest) return;
+    setView("map");
+    map.setView([nearest.cam.lat, nearest.cam.lon], Math.max(map.getZoom(), 16));
+    const m = camMarkers.get(nearest.cam.id);
+    if (m) m.openPopup();
+  };
   // Keep the toggle honest when the browser exits full-screen on its own
   // (e.g. the user hits Escape).
   document.addEventListener("fullscreenchange", () => {
