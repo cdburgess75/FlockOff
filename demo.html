@@ -394,6 +394,33 @@
   body.fullmap #appHeader,
   body.fullmap #tabBar { display: none; }
   body.fullmap .fabs { bottom: calc(16px + env(safe-area-inset-bottom)); }
+
+  /* GO — the drive-mode button (full screen + follow). Green so it reads as
+     "start". Text color is var(--bg): dark themes have bright greens (dark
+     text) and light themes dark greens (light text), so it contrasts both ways. */
+  #fabFull {
+    background: var(--green); border-color: var(--green); color: var(--bg);
+    font-weight: 800; font-size: 15px; letter-spacing: .02em;
+  }
+  /* One-time explainer bubble anchored beside GO (fabs is its offset parent). */
+  #goTip {
+    position: absolute; right: 56px; top: 0;
+    width: 196px;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); font-size: calc(12.5px * var(--ui-scale)); line-height: 1.45;
+    border-radius: 10px; padding: 10px 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    display: none; cursor: pointer;
+    animation: coverageFade .3s ease;
+  }
+  #goTip.show { display: block; }
+  #goTip b { color: var(--green); }
+  #goTip::after {
+    content: ""; position: absolute; right: -6px; top: 17px;
+    width: 10px; height: 10px; transform: rotate(45deg);
+    background: var(--panel);
+    border-right: 1px solid var(--border); border-top: 1px solid var(--border);
+  }
   .fab {
     width: 46px; height: 46px;
     border-radius: 50%;
@@ -741,7 +768,8 @@
 </nav>
 
 <div class="fabs">
-  <button class="fab" id="fabFull" title="Full-screen map">⛶</button>
+  <div id="goTip">Ready to flip off Flock cameras? Hit <b>GO</b> — full-screen drive mode with tracking on.</div>
+  <button class="fab" id="fabFull" title="GO — full-screen drive mode">GO</button>
   <button class="fab" id="fabMute" title="Mute alerts">🔔</button>
   <button class="fab active" id="fabFollow" title="Follow my position">◎</button>
   <button class="fab" id="fabSettings" title="Settings">⚙</button>
@@ -1964,11 +1992,16 @@ function setMuted(on) {
 function setFullMap(on) {
   // Only makes sense on the map; jump there if we're elsewhere.
   if (on && currentView !== "map") setView("map");
+  if (on) {
+    // GO is drive mode: center-tracking comes on with it, no extra tap.
+    if (!S.follow) setFollow(true);
+    dismissGoTip(true);
+  }
   document.body.classList.toggle("fullmap", on);
   const b = document.getElementById("fabFull");
   b.classList.toggle("active", on);
-  b.textContent = on ? "🗗" : "⛶";
-  b.title = on ? "Exit full-screen map" : "Full-screen map";
+  b.textContent = on ? "🗗" : "GO";
+  b.title = on ? "Exit full-screen drive mode" : "GO — full-screen drive mode";
   // Best-effort native full-screen; ignore rejections (blocked contexts, iOS).
   try {
     if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -2154,10 +2187,29 @@ function bindUI() {
     wakeLockWanted = true;
     acquireWakeLock();
     document.getElementById("startGate").classList.remove("show");
+    showGoTip();
   };
 
   setMuted(S.muted);
   setFollow(S.follow);
+}
+
+/* GO explainer bubble: shows on each launch until the user has hit GO once,
+   then never again. Tapping the bubble counts as hitting GO. */
+const LS_GO_USED = "flockoff.goUsed";
+let goTipTimer = null;
+function showGoTip() {
+  try { if (localStorage.getItem(LS_GO_USED)) return; } catch (e) {}
+  const tip = document.getElementById("goTip");
+  tip.classList.add("show");
+  tip.onclick = () => setFullMap(true);
+  clearTimeout(goTipTimer);
+  goTipTimer = setTimeout(() => dismissGoTip(false), 8000);
+}
+function dismissGoTip(used) {
+  clearTimeout(goTipTimer);
+  document.getElementById("goTip").classList.remove("show");
+  if (used) { try { localStorage.setItem(LS_GO_USED, "1"); } catch (e) {} }
 }
 
 // Create/resume the AudioContext inside a user gesture so later
