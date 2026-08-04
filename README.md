@@ -1,173 +1,211 @@
-# FlockOff
+<div align="center">
 
-FlockOff is a driver-facing map of the **ALPR surveillance dragnet** —
-automated license-plate readers from Flock Safety and similar operators —
-built from the crowdsourced [DeFlock](https://deflock.me) tags in
-OpenStreetMap. It shows the cameras around you on a street map and gives a
-real-time heads-up as you approach one.
+# 🚨 FlockOff
 
-**What it's for.** ALPR cameras log where your car is, when, and pool that
-history across police departments and private operators — silently,
-retroactively, at scale. Most people have no idea how densely they're
-tracked. FlockOff exists to make that invisible network **visible to the
-people driving through it**: you should get to know when and where you're
-being read.
+### **See the cameras that see you.**
 
-**What it is _not_.** It is not a routing engine. FlockOff never plans a
-path to avoid cameras — it tells you what's around you and leaves the
-driving to you. And it does not touch the cameras: it reads public map data
-and your own device GPS, on your device, and interferes with no signal or
-system.
+*A real-time, driver-facing map of the ALPR surveillance dragnet — license-plate
+readers, speed cams, red-light cams, CCTV, and gunshot sensors — with proximity
+alerts as you approach them. Built from crowdsourced, public OpenStreetMap data.*
 
-> **Positioning, distribution, and the reasoning behind every major design
-> choice live in [`docs/DIRECTION.md`](docs/DIRECTION.md).** Read that first
-> if you want the *why*.
+<br>
+
+<a href="https://cdburgess75.github.io/FlockOff/">
+  <img src="https://img.shields.io/badge/%E2%96%B6%EF%B8%8E%20%20TRY%20THE%20LIVE%20APP-2ea44f?style=for-the-badge&logoColor=white&labelColor=2ea44f" alt="Try the live app" height="60">
+</a>
+
+**[cdburgess75.github.io/FlockOff](https://cdburgess75.github.io/FlockOff/)**
+
+*No account. No install. No tracking. Open it, tap GO, drive.*
+
+<br>
+
+<!-- HERO VISUAL — currently a simulated-drive screenshot (Liberty theme, alert
+     firing). Ideal replacement: a short GIF/screen-recording of a REAL drive on
+     a phone — approach a camera, alert card pops, pin pulses red. ~15s loop,
+     portrait, <5 MB. Drop it in at docs/screenshots/hero.png (or .gif) and the
+     README picks it up. -->
+<img src="docs/screenshots/hero.png" alt="FlockOff alerting mid-drive: a red 'ALPR CAMERA · 910 FT AWAY — tap to view' card floats over the map while camera pins and the driver's position marker show ahead" width="360">
+
+</div>
 
 ---
 
-## Use it
+## ⚡ What it does
 
-Open `index.html` in a browser — as a local file, via GitHub Pages, or
-installed as a PWA — and tap **"Enable alerts & keep screen on."** That one
-gesture unlocks alert audio (browsers block sound until you interact) and
-holds a screen Wake Lock so the app doesn't sleep in a mount. Grant location
-access and drive. Camera data and settings are cached in `localStorage`, and
-Leaflet is bundled under `vendor/`, so after the first successful load the
-app keeps working fully offline (freshness is always shown in the status
-bar). Distances default to **miles/feet** (US); switch to km/m in the
-settings drawer.
+FlockOff makes the invisible surveillance network **visible to the people driving
+through it**. ALPR cameras log where your car is and when, and pool that history
+across police departments and private operators — silently, retroactively, at
+scale. You should get to know when you're being read.
 
-Because it runs in the browser, treat it as a **foreground, screen-on**
-tool: mounted and awake, not asleep in your pocket. Hardening this
-(Wake Lock, install prompt, audio-first alerts) is the near-term priority —
-see the roadmap.
+- 📍 **Live surveillance map** — every mapped detector around you, loaded
+  automatically for whatever area you're looking at, cached for offline use.
+- 🔔 **Proximity alerts while driving** — audible beep, red alert card,
+  vibration, and optional spoken callouts (*"License plate reader ahead,
+  900 feet"*) when you close within your alert radius. Debounced per camera so
+  nothing chatters.
+- 🎯 **Field-of-view cones** — cameras with a mapped facing direction show an
+  estimated FOV wedge at driving zoom, so you can see *where they're pointed*.
+- 🗂️ **Five detector layers, all user-selectable** — ALPR plate readers and
+  acoustic gunshot sensors on by default; speed cameras, red-light/traffic
+  cams, and general CCTV opt-in. Distinct pin glyphs for each.
+- 🟢 **One-tap drive mode** — the green **GO** button goes full-screen and turns
+  on center-tracking in a single tap.
+- 📶 **Offline-first PWA** — app shell, map tiles you've seen, and camera data
+  all cached on-device. Installable to your home screen; updates arrive with an
+  explicit "Update now" banner, never mid-drive.
+- 🎨 **13 themes + 8 map styles** — from muted dark to high-visibility, with a
+  red/white/blue Freedom set. Big-text accessibility toggle (AA).
+- 🤫 **Coverage honesty** — the app tells you when data is stale and reminds
+  you that *quiet ≠ clear*. It never pretends an unmapped road is a safe road.
+- 🛡️ **Passive by design** — reads public map data and your own GPS, on your
+  device. Transmits nothing about you, touches no camera, interferes with no
+  signal.
 
-- **Alerts:** audible double-beep, red banner, vibration, and optional
-  **spoken callouts** ("license plate reader ahead, 300 meters") when the
-  nearest camera crosses the alert radius (default 300 m). Each channel is
-  toggleable; there's a master mute. Alerts are debounced — once per camera
-  per approach, with a cooldown and hysteresis so a single camera doesn't
-  chatter.
-- **Settings drawer (⚙):** alert radius, fetch radius, cache max age,
-  optional "only alert if camera is ahead" heading filter (±60°),
-  refresh-now, clear-cache.
-- **Markers:** grey = known camera, amber = within 2× the alert radius,
-  red = inside it. Tap one for operator, brand, facing direction, and
-  report date.
+<div align="center">
 
-## What it maps and alerts on
+<!-- FEATURE VISUALS — left: mixed detector pins + FOV cones (dark theme).
+     right: the default Graphite look while driving. Replace with real-drive
+     captures when available; keep both portrait, ~360 px display width. -->
+<img src="docs/screenshots/detectors.png" alt="Dark-theme map showing distinct pins for ALPR, speed camera, CCTV and gunshot detector layers, each casting a translucent field-of-view cone" width="300">
+&nbsp;&nbsp;
+<img src="docs/screenshots/default-theme.png" alt="Default Graphite theme: dark navy UI with blue accents, amber 'approaching' camera pins ahead of the driver marker, and the icon tab bar" width="300">
 
-All surveillance categories present in OpenStreetMap are — by direction —
-**user-selectable**, because the data is public knowledge. The default
-selection is **ALPR + acoustic gunshot sensors** (e.g. ShotSpotter): the
-same mass-surveillance, dragnet character, and the cleanest civil-liberties
-story.
+</div>
 
-Alerting is configurable per category. **Enabling real-time approach alerts
-for traffic-enforcement cameras (speed / red-light) turns FlockOff into a
-configurable enforcement-alert tool.** That is a deliberate, user-owned
-choice — and it is also why the alerting build is **not** distributed
-through the Apple or Google app stores (they treat it as a radar detector).
-FlockOff ships as a **web app / PWA and direct install**. See
-[`docs/DIRECTION.md`](docs/DIRECTION.md) for the full reasoning.
+## 🧰 Tech stack
 
-> _Today the app queries ALPR only. Multi-category selection with separate
-> "show on map" vs "alert" controls is the direction described below, not
-> yet shipped._
+![Vanilla JS](https://img.shields.io/badge/Vanilla_JS-zero_frameworks-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?style=flat-square&logo=leaflet&logoColor=white)
+![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-Overpass_API-7EBC6F?style=flat-square&logo=openstreetmap&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-offline--first-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
+![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-auto--deploy-222?style=flat-square&logo=github&logoColor=white)
+![No build step](https://img.shields.io/badge/build_step-none-2ea44f?style=flat-square)
 
-## Coverage honesty — silence is not safety
+One HTML file. No framework, no bundler, no npm install, no backend. Leaflet is
+vendored under `vendor/`, so the whole app is self-contained and auditable in
+an afternoon.
 
-This is the most important thing to understand about the tool.
+## 🚀 Quick start (local)
 
-- The dataset is **crowdsourced and incomplete.** An empty area does **not**
-  mean no cameras — mobile/trailer units and unmapped installs won't appear.
-- Mapped locations can be wrong, moved, or stale.
-- **No beep does not mean no camera.** Do not let the quiet lull you.
+**Prerequisites:** any modern browser, Python 3 (or any static file server),
+and `git`.
 
-The near-term work here is to surface a real **coverage / confidence**
-signal (how well-surveyed your area is, how confirmed each point is), rather
-than only the data-age line the status bar shows today. Unconfirmed
-reports are meant to appear *dimmed and silent* until they're confirmed —
-so a single bad or mistaken submission can't make the app cry wolf.
+```bash
+# 1. Clone
+git clone https://github.com/cdburgess75/FlockOff.git
+cd FlockOff
 
-## Try the demo (no driving required)
+# 2. Install — nothing. There are no dependencies.
 
-Open `demo.html` in a browser to watch the app work without a phone, GPS, or
-network. It runs the **real application code unchanged** but feeds it a
-simulated car driving a downtown route past mock ALPR cameras, so you can
-see the proximity alerts, banner, marker colors (grey → amber → red), and
-status bar react in real time. Play/pause, restart, and a speed control are
-in the panel. Leaflet is vendored under `vendor/` so the demo is fully
-self-contained and works offline.
+# 3. Run any static server (service worker + geolocation need http://, not file://)
+python3 -m http.server 8080
 
-`demo.html` is generated from `index.html` by `tools/build_demo.py` — the
-app itself stays the single source of truth; the script only prepends a
-harness that overrides geolocation and the Overpass fetch.
+# 4. Open it
+#    App:  http://localhost:8080/
+#    Demo: http://localhost:8080/demo.html  (simulated drive, no GPS needed)
+```
 
-## Contributing camera locations (direction)
+Want to see it work without leaving your desk? **`demo.html`** runs the real
+app code against a simulated car driving past mock cameras — alerts, pins, and
+status bar all react live. It's regenerated from the app by
+`python3 tools/build_demo.py`; `index.html` stays the single source of truth.
 
-The intended contribute-back loop: **tap to add a camera → it's written to
-OpenStreetMap under your own account** (reusing DeFlock's pipeline, no
-backend of ours). A freshly submitted point shows on the map **dimmed and
-silent**; it only starts **alerting** once it is either
+**Deploying your own:** it's a static site — host `index.html` + `vendor/` +
+`icons/` + `manifest.webmanifest` + `sw.js` anywhere. This repo auto-deploys to
+GitHub Pages on every push to `main` via `.github/workflows/pages.yml`
+(one-time setup: *Settings → Pages → Source → GitHub Actions*).
 
-1. approved on the project's **owner-signed allowlist**, or
-2. **auto-promoted** after _N_ independent confirmations.
+## 📱 Install it on your phone ("Save to Home Screen")
 
-This keeps the canonical data in OSM, keeps a human gate against poisoning,
-and keeps that gate from being a permanent bottleneck. Rationale and the
-approver's exit path are in [`docs/DIRECTION.md`](docs/DIRECTION.md).
+FlockOff is a PWA — saved to your home screen it launches full-screen with its
+own icon, keeps working offline, and feels like a native app. **This is the
+recommended way to use it in a car.**
 
-## Deploy & install
+### iPhone / iPad (Safari)
 
-The app is a static site — host `index.html` (plus `vendor/`, `icons/`,
-`manifest.webmanifest`, and `sw.js`) anywhere.
+1. Open **[the live app](https://cdburgess75.github.io/FlockOff/)** in
+   **Safari**.
+2. Tap the **Share** button (the square with an arrow, bottom of the screen).
+3. Scroll down and tap **Add to Home Screen**.
+4. Tap **Add**. Done — look for the FlockOff radar icon on your home screen.
 
-- **GitHub Pages:** `.github/workflows/pages.yml` deploys on every push to
-  the default branch. One-time setup: **Settings → Pages → Source →
-  "GitHub Actions."** The workflow regenerates `demo.html` and publishes a
-  clean `_site` (no repo cruft).
-- **Install as an app:** served over HTTPS, a **service worker** precaches
-  the app shell (HTML/JS/CSS/icons) and caches map tiles as you view them, so
-  the whole app — not just the camera data — works offline. The
-  `manifest.webmanifest` makes it installable to a home screen; on iOS use
-  Share → *Add to Home Screen*.
+> 💡 iPhone tip: the alert beep plays on the **media** channel and is silenced
+> by the ring/silent switch. Use **Setup → Test alert now** in your driveway to
+> confirm you can hear it before you rely on it.
 
-Because it enables real-time approach alerts across camera categories, the
-alerting build is intended for **web / PWA / direct install**, not the Apple
-or Google app stores (see [`docs/DIRECTION.md`](docs/DIRECTION.md)).
+### Android (Chrome)
 
-## Roadmap
+1. Open **[the live app](https://cdburgess75.github.io/FlockOff/)** in
+   **Chrome**.
+2. Tap the **⋮ menu** (top right).
+3. Tap **Add to Home screen** (on newer versions: **Install app**).
+4. Confirm with **Install** / **Add**. FlockOff appears in your app drawer and
+   home screen like any other app.
 
-**Shipped:** four switchable **color themes** (Graphite / Daylight /
-High-Visibility / Harbor) in a top selector, coverage/confidence signal
-("silence ≠ safety"), PWA install +
-offline app shell, screen Wake Lock, **switchable map styles** (dark /
-minimal / colorful / light / satellite / OSM, in the settings drawer) with
-OSM fallback, imperial units, one-tap alert/audio start, hands-free **voice
-callouts**, and an auto-deploy to GitHub Pages.
+<!-- INSTALL VISUAL PLACEHOLDER — a side-by-side pair of phone screenshots:
+     (1) iOS Safari share sheet with "Add to Home Screen" highlighted,
+     (2) Android Chrome menu with "Install app" highlighted. Suggested path:
+     docs/screenshots/install-ios.png and docs/screenshots/install-android.png,
+     ~300 px display width each. Uncomment when added:
 
-Next, ordered by what moves the needle:
+<div align="center">
+<img src="docs/screenshots/install-ios.png" alt="iOS Safari share sheet with Add to Home Screen highlighted" width="300">
+&nbsp;&nbsp;
+<img src="docs/screenshots/install-android.png" alt="Android Chrome menu with Install app highlighted" width="300">
+</div>
+-->
 
-1. **Category system** — user-selectable surveillance categories with
-   independent *show-on-map* vs *alert* controls and per-category
-   radius/cooldown to manage alert fatigue. (First open question: which
-   non-ALPR categories have real OSM coverage — speed cameras and general
-   CCTV do; acoustic/gunshot sensors essentially don't yet.)
-2. **Confidence-gated alerting** — dimmed/silent until confirmed; owner
-   allowlist + auto-promote-on-_N_-confirmations.
-3. **Contribute back** — tap-to-add via OSM OAuth, feeding the allowlist.
-4. **Live detection (north star)** — a passive BLE/WiFi companion sniffer to
-   surface cameras not yet in any database. The only true fix for coverage,
-   and by far the hardest build — deliberately deferred.
+## 🧭 Using it
 
-Open questions still to resolve: distracted-driving UX & liability, a
-jurisdiction/legal stance for enforcement alerting, and a hard "we transmit
-nothing about you" user-privacy guarantee. See the direction doc.
+1. Open the app and tap **"Enable alerts & keep screen on"** — that one tap
+   unlocks alert audio and keeps the screen awake in a mount.
+2. Hit the green **GO** button — full-screen map, center-tracking on.
+3. Drive. Pins go **amber** as you approach and **red** (with a pulsing `!`)
+   inside your alert radius; the red card, beep, and vibration fire together.
+4. Tune everything in **Setup**: detector layers, alert radius, heading filter,
+   voice callouts, units, themes, map styles — and a **Test alert now** button
+   so you can verify sound before you need it.
 
-## Data credits
+## ⚠️ Coverage honesty — silence is not safety
 
-Camera data © OpenStreetMap contributors (ODbL), via the Overpass API,
-using the [DeFlock](https://deflock.me) tagging scheme. Map tiles ©
-OpenStreetMap contributors & [CARTO](https://carto.com/attributions), with
-the OSM standard tiles as a fallback.
+The dataset is **crowdsourced and incomplete**. An empty road does **not** mean
+no cameras — unmapped installs and mobile trailer units won't appear, and
+mapped points can be stale. FlockOff surfaces data freshness in the status bar
+and reminds you in-app: **no beep does not mean no camera.**
+
+The fix is more mappers. If you can see which way a camera points, adding its
+`direction` tag on [OpenStreetMap](https://www.openstreetmap.org) (see
+[DeFlock's guide](https://deflock.me)) gives *everyone* its field-of-view cone.
+
+## 🔒 What it is — and isn't
+
+- ✅ **Passive.** Reads public map data + your own device GPS, on your device.
+- ✅ **Private.** No account, no server of ours, no telemetry, nothing
+  transmitted about you — your location never leaves your phone.
+- ❌ **Not a router.** It never plans camera-avoiding routes; it informs, you drive.
+- ❌ **Not interference.** It touches no camera, jams no signal.
+
+Because per-category alerting (speed / red-light) is a user's own choice, the
+alerting build ships as a **web app / PWA** rather than through the app stores.
+The reasoning behind every major design decision lives in
+[`docs/DIRECTION.md`](docs/DIRECTION.md).
+
+## 🗺️ Data credits
+
+Camera data © [OpenStreetMap](https://www.openstreetmap.org/copyright)
+contributors (ODbL), via the Overpass API, using the
+[DeFlock](https://deflock.me) tagging scheme. Map tiles © OpenStreetMap
+contributors, [CARTO](https://carto.com/attributions), Esri, and Stadia Maps.
+
+---
+
+<div align="center">
+
+**Made for people who think being tracked everywhere they drive is worth knowing about.**
+
+<a href="https://cdburgess75.github.io/FlockOff/">
+  <img src="https://img.shields.io/badge/%E2%96%B6%EF%B8%8E%20%20OPEN%20FLOCKOFF-2ea44f?style=for-the-badge&logoColor=white" alt="Open FlockOff" height="44">
+</a>
+
+</div>
