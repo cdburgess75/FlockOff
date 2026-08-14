@@ -583,6 +583,7 @@
       <div class="ver" id="tbVer">dev</div>
     </div>
     <div class="hd-btns">
+      <button class="hd-btn" id="btnShare" type="button" title="Share FlockOff" aria-label="Share FlockOff"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg></button>
       <button class="hd-btn" id="btnTextSize" type="button" title="Text size" aria-label="Text size">AA</button>
       <button class="hd-btn" id="btnTheme" type="button" title="Color theme" aria-label="Color theme">☀</button>
     </div>
@@ -1936,6 +1937,29 @@ function bindUI() {
   const btnTh = document.getElementById("btnTheme");
   if (btnTh) btnTh.onclick = cycleTheme;
   setTextSize(S.uiscale);
+
+  // Share: the native sheet (text/email/anything the phone offers) where the
+  // Web Share API exists; otherwise copy the link and say so.
+  const btnShare = document.getElementById("btnShare");
+  if (btnShare) btnShare.onclick = async () => {
+    const url = location.origin + location.pathname;
+    const data = {
+      title: "FlockOff",
+      text: "FlockOff — see the ALPR cameras around you and get alerts while you drive.",
+      url: url,
+    };
+    try {
+      if (navigator.share) { await navigator.share(data); return; }
+    } catch (e) {
+      if (e && e.name === "AbortError") return;   // user closed the sheet
+    }
+    try {
+      await navigator.clipboard.writeText(data.text + " " + url);
+      toast("Link copied — paste it anywhere");
+    } catch (e) {
+      toast(url);   // last resort: at least show the link
+    }
+  };
 
   // Units toggle re-renders every distance currently on screen.
   const imperialInput = document.getElementById("chImperial");
