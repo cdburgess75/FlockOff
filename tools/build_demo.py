@@ -96,7 +96,7 @@ DEMO_HTML = r"""
 </div>
 """
 
-src = src.replace('<div id="toast"></div>', '<div id="toast"></div>\n' + DEMO_HTML, 1)
+src = src.replace('<div id="toast" role="status"></div>', '<div id="toast" role="status"></div>\n' + DEMO_HTML, 1)
 
 # --- 3. Simulation harness (injected BEFORE the app's inline script) -----
 HARNESS = r"""<script>

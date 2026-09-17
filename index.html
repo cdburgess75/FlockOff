@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0d1117">
 <meta name="app-version" content="__BUILD_VERSION__">
-<title>ALPR Proximity Map</title>
+<title>FlockOff</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -35,6 +35,7 @@
     --on-accent: #0a0f14;
     --amber: #f5a623;
     --red: #ff5b52;
+    --on-red: #1a0508;  /* text on --red; dark on the bright reds, white on the deep light-theme reds */
     --green: #37d39b;
     --pin: #8b98a5;  /* camera-pin fill; per-theme so it never collides with
                         the amber "approaching" or red "alert" states */
@@ -50,8 +51,8 @@
   }
   :root[data-theme="daylight"] {
     --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6fa; --border: #bfccdb;
-    --text: #101827; --muted: #55637a; --accent: #1b6ef3; --on-accent: #ffffff;
-    --amber: #a85708; --red: #c81f2c; --green: #15803d; --pin: #1b6ef3;
+    --text: #101827; --muted: #55637a; --accent: #1660d8; --on-accent: #ffffff;
+    --amber: #a85708; --red: #c81f2c; --green: #15803d; --pin: #1b6ef3; --on-red: #ffffff;
   }
   :root[data-theme="highvis"] {
     --bg: #000000; --panel: #0e0e0e; --panel-2: #1b1b1b; --border: #5a5a5a;
@@ -87,7 +88,7 @@
     /* Red/white/blue, light: white ground, blue text, red logo + alerts. */
     --bg:#ffffff; --panel:#f3f6fc; --panel-2:#e9eff8; --border:#bccdea;
     --text:#153a86; --muted:#47609f; --accent:#1e50d8; --on-accent:#ffffff;
-    --amber:#b45309; --red:#c8102e; --green:#157a3c; --pin:#1e50d8;
+    --amber:#b45309; --red:#c8102e; --green:#157a3c; --pin:#1e50d8; --on-red: #ffffff;
   }
   /* The logo (and its version) go red; everything else stays blue. */
   :root[data-theme="freedom"] .brand,
@@ -103,13 +104,13 @@
   :root[data-theme="liberty"] {
     /* Light, red-forward: white ground, dark text, red logo + accents. */
     --bg:#ffffff; --panel:#f2f4f7; --panel-2:#e8ebf0; --border:#c5cdd8;
-    --text:#1a1f2b; --muted:#6b7480; --accent:#d21f2e; --on-accent:#ffffff;
-    --amber:#b45309; --red:#d21f2e; --green:#157a3c; --pin:#1c2740;
+    --text:#1a1f2b; --muted:#5d6672; --accent:#d21f2e; --on-accent:#ffffff;
+    --amber:#b45309; --red:#d21f2e; --green:#157a3c; --pin:#1c2740; --on-red: #ffffff;
   }
   :root[data-theme="watchman"] {
     /* Dark navy, red-forward: deep slate ground, white text, red logo. */
     --bg:#0e1420; --panel:#172033; --panel-2:#1f2a40; --border:#374a6b;
-    --text:#eef2f8; --muted:#93a0b4; --accent:#ff4d5a; --on-accent:#ffffff;
+    --text:#eef2f8; --muted:#93a0b4; --accent:#ff4d5a; --on-accent:#1a0508;
     --amber:#f2b03a; --red:#ff4d5a; --green:#3ad39a; --pin:#5b8cff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,6 +122,7 @@
     display: flex;
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;  /* no double-tap zoom on controls; pinch-zoom stays */
   }
 
   /* ---------- Update banner ---------- */
@@ -129,7 +131,7 @@
     flex: 0 0 auto;
     align-items: center; justify-content: space-between; gap: 12px;
     background: var(--accent); color: var(--on-accent);
-    padding: 11px 14px; font-size: 15px; font-weight: 700;
+    padding: 11px 14px; font-size: calc(15px * var(--ui-scale)); font-weight: 700;
     z-index: 1600;
   }
   #updateBar.show { display: flex; }
@@ -150,13 +152,16 @@
     display: flex; flex-direction: column; gap: 5px;
     z-index: 1000;
   }
-  .hd-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .hd-top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .hd-brand { min-width: 0; }
   .hd-brand .brand {
-    font-size: calc(23px * var(--ui-scale)); font-weight: 800;
+    /* Capped by viewport width so the largest text size never pushes the
+       header buttons off a 320px screen. */
+    font-size: min(calc(23px * var(--ui-scale)), 7.2vw); font-weight: 800;
     letter-spacing: .04em; color: var(--accent); line-height: 1;
   }
   .hd-brand .ver {
-    font-size: calc(11px * var(--ui-scale)); color: var(--accent); opacity: .8;
+    font-size: calc(11px * var(--ui-scale)); color: var(--accent);
     letter-spacing: .1em; margin-top: 4px; font-variant-numeric: tabular-nums;
   }
   .hd-btns { display: flex; gap: 8px; flex: 0 0 auto; }
@@ -177,10 +182,14 @@
     font-size: calc(11.5px * var(--ui-scale)); color: var(--muted);
     letter-spacing: .05em; text-transform: uppercase;
   }
+  /* GPS light: grey until there's a fix, then follows the GPS stat. */
   .hd-status .dot {
-    width: 9px; height: 9px; border-radius: 50%; background: var(--green);
-    box-shadow: 0 0 7px var(--green); flex: 0 0 auto;
+    width: 9px; height: 9px; border-radius: 50%; background: var(--muted);
+    flex: 0 0 auto;
   }
+  .hd-status .dot.good { background: var(--green); box-shadow: 0 0 7px var(--green); }
+  .hd-status .dot.warn { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  .hd-status .dot.bad  { background: var(--red); }
   .hd-status .stat b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
   .hd-status .stat.warn b { color: var(--amber); }
   .hd-status .stat.bad b  { color: var(--red); }
@@ -199,18 +208,21 @@
   .leaflet-control-zoom { border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,.5) !important; }
   .leaflet-control-zoom a {
     background: var(--panel) !important; color: var(--text) !important;
-    border: 1px solid var(--border) !important; width: 40px; height: 40px; line-height: 38px;
-    font-size: 22px;
+    border: 1px solid var(--border) !important;
+  }
+  .leaflet-bar.leaflet-control-zoom a,
+  .leaflet-touch .leaflet-bar.leaflet-control-zoom a {
+    width: 40px; height: 40px; line-height: 38px; font-size: 22px;
   }
   .leaflet-control-zoom a:first-child { border-radius: 11px 11px 0 0 !important; }
   .leaflet-control-zoom a:last-child { border-radius: 0 0 11px 11px !important; }
   .leaflet-bar a.leaflet-disabled { opacity: .5; }
 
   /* High-Visibility runs a touch larger and heavier for readability. */
-  :root[data-theme="highvis"] #alertBanner { font-size: 18px; }
-  :root[data-theme="highvis"] #statusBar { font-size: 14px; }
-  :root[data-theme="highvis"] #coverageNote { font-size: 13px; }
-  :root[data-theme="highvis"] .btn { font-size: 15px; }
+  :root[data-theme="highvis"] #alertBanner { font-size: calc(18px * var(--ui-scale)); }
+  :root[data-theme="highvis"] #statusBar { font-size: calc(14px * var(--ui-scale)); }
+  :root[data-theme="highvis"] #coverageNote { font-size: calc(13px * var(--ui-scale)); }
+  :root[data-theme="highvis"] .btn { font-size: calc(15px * var(--ui-scale)); }
   :root[data-theme="highvis"] #statusBar,
   :root[data-theme="highvis"] #coverageNote { border-top-width: 2px; }
 
@@ -218,11 +230,13 @@
   #alertBanner {
     display: none;
     position: fixed;
-    left: 14px; right: 14px;
+    left: 14px; width: calc(100% - 28px);
     bottom: calc(70px + 14px + env(safe-area-inset-bottom));
     z-index: 1150;
     background: var(--red);
-    color: #fff;
+    color: var(--on-red);
+    border: none;
+    font-family: inherit;
     font-weight: 800;
     font-size: calc(16px * var(--ui-scale));
     letter-spacing: .03em;
@@ -232,19 +246,22 @@
     border-radius: 12px;
     box-shadow: 0 8px 26px rgba(0,0,0,.35);
     cursor: pointer;
-    animation: bannerPulse 1s ease-in-out infinite alternate;
   }
   #alertBanner.show { display: block; }
+  #alertBanner:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
   #alertBanner small {
     display: block;
     font-weight: 600;
     font-size: calc(11.5px * var(--ui-scale));
     letter-spacing: .07em;
-    opacity: .92;
     margin-top: 3px;
   }
   body.fullmap #alertBanner { bottom: calc(14px + env(safe-area-inset-bottom)); }
   @keyframes bannerPulse { from { filter: brightness(1); } to { filter: brightness(1.25); } }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
   /* While the card is up, lift the FAB column clear of it. */
   body.alerting .fabs { bottom: calc(160px + env(safe-area-inset-bottom)); }
   body.alerting.fullmap .fabs { bottom: calc(104px + env(safe-area-inset-bottom)); }
@@ -258,11 +275,17 @@
     filter: drop-shadow(0 2px 3px rgba(0,0,0,.35));
     transform-origin: 50% 100%;
   }
-  .campin.alert svg { animation: pinPulse .8s ease-in-out infinite alternate; }
   .campin .g-warn { display: none; }
   .campin.alert .g-cam { display: none; }
   .campin.alert .g-warn { display: block; }
   @keyframes pinPulse { from { transform: scale(1); } to { transform: scale(1.14); } }
+  /* Motion is opt-in. Without it the red card, red pin and warning glyph
+     still carry the alert. */
+  @media (prefers-reduced-motion: no-preference) {
+    #alertBanner { animation: bannerPulse 1s ease-in-out infinite alternate; }
+    .campin.alert svg { animation: pinPulse .8s ease-in-out infinite alternate; }
+    #coverageNote, #goTip { animation: coverageFade .3s ease; }
+  }
 
   /* ---------- Views (map / nearby) ---------- */
   #views { flex: 1 1 auto; min-height: 0; position: relative; }
@@ -277,9 +300,11 @@
   }
   .nearby-item {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 13px 14px; border-bottom: 1px solid var(--border); cursor: pointer;
+    padding: 13px 14px; border: none; border-bottom: 1px solid var(--border); cursor: pointer;
     font-size: calc(13px * var(--ui-scale));
+    width: 100%; background: none; color: inherit; font-family: inherit; text-align: start;
   }
+  .nearby-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
   .nearby-item:active { background: var(--panel-2); }
   .nearby-item .op { color: var(--text); font-weight: 700; }
   .nearby-item .meta { color: var(--muted); font-size: calc(11.5px * var(--ui-scale)); text-transform: uppercase; letter-spacing: .04em; }
@@ -297,10 +322,11 @@
     font-family: var(--mono); display: flex; flex-direction: column; align-items: center; gap: 2px;
     padding: 8px 4px 9px; font-size: calc(10.5px * var(--ui-scale));
     letter-spacing: .08em; text-transform: uppercase;
+    border-top: 2px solid transparent;
   }
   #tabBar .tab .ti { line-height: 1; }
   #tabBar .tab .ti svg { width: calc(22px * var(--ui-scale)); height: calc(22px * var(--ui-scale)); display: block; }
-  #tabBar .tab.on { color: var(--accent); }
+  #tabBar .tab.on { color: var(--accent); border-top-color: currentColor; font-weight: 800; }
   #tabBar .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 
   .hd-status.sub { font-size: calc(11px * var(--ui-scale)); }
@@ -373,10 +399,13 @@
     text-align: center;
     line-height: 1.45;
     cursor: pointer;
-    animation: coverageFade .3s ease;
   }
   #coverageNote.show { display: block; }
-  #coverageNote .dismiss { opacity: .7; font-size: .9em; }
+  #coverageNote .dismiss {
+    font: inherit; font-size: .9em; color: inherit; cursor: pointer;
+    background: none; border: 1px solid currentColor; border-radius: 6px;
+    padding: 1px 8px; margin-inline-start: 4px;
+  }
   @keyframes coverageFade { from { opacity: 0; } to { opacity: 1; } }
 
   /* ---------- Floating controls ---------- */
@@ -411,7 +440,6 @@
     border-radius: 10px; padding: 10px 12px;
     box-shadow: 0 6px 20px rgba(0,0,0,.35);
     display: none; cursor: pointer;
-    animation: coverageFade .3s ease;
   }
   #goTip.show { display: block; }
   #goTip b { color: var(--green); }
@@ -433,8 +461,19 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.5);
     user-select: none;
   }
+  .fab svg { width: 22px; height: 22px; display: block; }
+  .fab:active { filter: brightness(1.3); }
+  .fab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .fab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .fab.muted-on { background: var(--red); border-color: var(--red); color: #fff; }
+  .fab.muted-on { background: var(--red); border-color: var(--red); color: var(--on-red); }
+
+  /* Phone in landscape: the column of four is taller than the map, so lay the
+     stack along the bottom edge instead. */
+  @media (max-height: 480px) and (orientation: landscape) {
+    .fabs { flex-direction: row; align-items: flex-end; }
+    #goTip { right: 0; top: auto; bottom: 56px; }
+    #goTip::after { display: none; }
+  }
 
   /* ---------- Setup / settings (full page view) ---------- */
   #viewSetup { background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -447,7 +486,7 @@
     border-radius: 8px;
     padding: 10px 12px;
     margin-bottom: 8px;
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale));
   }
   .setting label { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; }
   .setting .val { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
@@ -459,7 +498,8 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 6px 8px;
-    font-size: 14px;
+    font-family: inherit;
+    font-size: calc(14px * var(--ui-scale));
     accent-color: var(--accent);
   }
   .btnRow { display: flex; gap: 8px; margin-top: 10px; }
@@ -470,13 +510,15 @@
     color: var(--text);
     border-radius: 8px;
     padding: 10px;
-    font-size: 14px;
+    font-family: inherit;
+    font-size: calc(14px * var(--ui-scale));
     cursor: pointer;
   }
+  .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .btn:active { filter: brightness(1.3); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   .btn.danger  { color: var(--red); border-color: var(--red); }
-  #about { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+  #about { font-size: calc(13.5px * var(--ui-scale)); color: var(--muted); line-height: 1.55; }
   #about p { margin-bottom: 8px; }
   #about b { color: var(--text); }
 
@@ -498,8 +540,8 @@
     padding: 24px;
     max-width: 340px;
   }
-  #emptyState h2 { font-size: 17px; margin-bottom: 10px; }
-  #emptyState p { font-size: 14px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  #emptyState h2 { font-size: calc(17px * var(--ui-scale)); margin-bottom: 10px; }
+  #emptyState p { font-size: calc(14px * var(--ui-scale)); color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
 
   /* ---------- Start gate (audio unlock + screen wake lock) ---------- */
   #startGate {
@@ -519,9 +561,9 @@
     padding: 24px;
     max-width: 340px;
   }
-  #startGate h2 { font-size: 18px; margin-bottom: 10px; }
-  #startGate p { font-size: 14px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
-  #startGate .btn.primary { font-size: 15px; padding: 12px; }
+  #startGate h2 { font-size: calc(18px * var(--ui-scale)); margin-bottom: 10px; }
+  #startGate p { font-size: calc(14px * var(--ui-scale)); color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  #startGate .btn.primary { font-size: calc(15px * var(--ui-scale)); padding: 12px; }
 
   /* ---------- Toast ---------- */
   #toast {
@@ -531,7 +573,7 @@
     background: var(--panel);
     border: 1px solid var(--border);
     color: var(--text);
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-scale));
     padding: 8px 14px;
     border-radius: 20px;
     z-index: 1300;
@@ -542,6 +584,13 @@
     text-align: center;
   }
   #toast.show { opacity: 1; }
+  /* Sticky toasts (errors) stay until dismissed, so they take taps. */
+  #toast.sticky { pointer-events: auto; border-radius: 12px; padding: 10px 14px; width: max-content; }
+  #toast.sticky button {
+    font: inherit; font-weight: 700; color: var(--accent); cursor: pointer;
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; margin-top: 8px; min-height: 36px;
+  }
 
   /* ---------- Markers ---------- */
   /* "You are here" — a bright core plus a heading arrow so it's obvious
@@ -559,13 +608,13 @@
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: 22px; height: 22px; border-radius: 50%;
     background: var(--accent); border: 4px solid #fff;
-    box-shadow: 0 0 0 2px rgba(88,166,255,.55), 0 0 12px rgba(88,166,255,.95);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 95%, transparent);
   }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     background: var(--panel); color: var(--text);
   }
-  .camPopup { font-size: 13px; line-height: 1.5; }
-  .camPopup b { font-size: 14px; }
+  .camPopup { font-size: calc(13px * var(--ui-scale)); line-height: 1.5; }
+  .camPopup b { font-size: calc(14px * var(--ui-scale)); }
   .camPopup .muted { color: var(--muted); }
 </style>
 </head>
@@ -583,14 +632,14 @@
       <div class="ver" id="tbVer">dev</div>
     </div>
     <div class="hd-btns">
-      <button class="hd-btn" id="btnShare" type="button" title="Share FlockOff" aria-label="Share FlockOff"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg></button>
+      <button class="hd-btn" id="btnShare" type="button" title="Share FlockOff" aria-label="Share FlockOff"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg></button>
       <button class="hd-btn" id="btnTextSize" type="button" title="Text size" aria-label="Text size">AA</button>
-      <button class="hd-btn" id="btnTheme" type="button" title="Color theme" aria-label="Color theme">☀</button>
+      <button class="hd-btn" id="btnTheme" type="button" title="Color theme" aria-label="Color theme"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
     </div>
   </div>
   <div class="tagline">Live ALPR map</div>
   <div class="hd-status">
-    <span class="dot"></span>
+    <span class="dot" id="gpsDot" aria-hidden="true"></span>
     <span class="stat" id="stGps">GPS <b>waiting…</b></span>
     <span class="stat" id="stNearest">Nearest <b>–</b></span>
     <span class="stat" id="stCams">Cameras <b>–</b></span>
@@ -601,15 +650,19 @@
   </div>
 </div>
 
-<div id="alertBanner" role="alert"></div>
+<!-- The card is a real button (tap/Enter jumps to the camera). Announcements
+     go through the separate live region, written once per alert — not on
+     every GPS tick like the card's distance text. -->
+<button id="alertBanner" type="button"></button>
+<div id="alertLive" class="sr-only" role="alert"></div>
 
 <main id="views">
   <section class="view on" id="viewMap">
     <div id="map"></div>
-    <div id="coverageNote" title="Tap to dismiss">
+    <div id="coverageNote">
       ⚠ Quiet ≠ clear — camera data is crowdsourced and incomplete. No alert does
       not mean no camera; unmapped and mobile units won't appear here.
-      <span class="dismiss">(tap to dismiss)</span>
+      <button class="dismiss" type="button">Dismiss</button>
     </div>
   </section>
   <section class="view" id="viewNearby">
@@ -723,21 +776,21 @@
   </section>
 </main>
 
-<nav id="tabBar" role="tablist">
-  <button class="tab on" id="tabMap" type="button" data-view="map"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><span class="tl">Map</span></button>
-  <button class="tab" id="tabNearby" type="button" data-view="nearby"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 4 8 5.5H5a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7.5a2 2 0 0 0-2-2h-3L14.6 4H9.4zM12 17.2a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg></span><span class="tl">Nearby</span></button>
-  <button class="tab" id="tabSetup" type="button" data-view="setup"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.1-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.3 7.3 0 0 0-1.73-1l-.38-2.65A.5.5 0 0 0 13.93 2h-4a.5.5 0 0 0-.5.43L9.06 5.08a7.3 7.3 0 0 0-1.73 1l-2.48-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .13.64L4.46 11c-.04.33-.06.66-.06 1s.02.67.06 1l-2.1 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.38.31.6.22l2.49-1c.53.41 1.11.75 1.73 1l.38 2.65c.04.25.25.43.5.43h4c.25 0 .46-.18.5-.43l.37-2.65a7.3 7.3 0 0 0 1.73-1l2.49 1c.22.09.48 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM11.93 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></span><span class="tl">Setup</span></button>
+<nav id="tabBar" aria-label="Views">
+  <button class="tab on" id="tabMap" type="button" data-view="map" aria-current="page"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><span class="tl">Map</span></button>
+  <button class="tab" id="tabNearby" type="button" data-view="nearby"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.4 4 8 5.5H5a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7.5a2 2 0 0 0-2-2h-3L14.6 4H9.4zM12 17.2a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg></span><span class="tl">Nearby</span></button>
+  <button class="tab" id="tabSetup" type="button" data-view="setup"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.1-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.3 7.3 0 0 0-1.73-1l-.38-2.65A.5.5 0 0 0 13.93 2h-4a.5.5 0 0 0-.5.43L9.06 5.08a7.3 7.3 0 0 0-1.73 1l-2.48-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .13.64L4.46 11c-.04.33-.06.66-.06 1s.02.67.06 1l-2.1 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.38.31.6.22l2.49-1c.53.41 1.11.75 1.73 1l.38 2.65c.04.25.25.43.5.43h4c.25 0 .46-.18.5-.43l.37-2.65a7.3 7.3 0 0 0 1.73-1l2.49 1c.22.09.48 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM11.93 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></span><span class="tl">Settings</span></button>
 </nav>
 
 <div class="fabs">
   <div id="goTip">Ready to flip off Flock cameras? Hit <b>GO</b> — full-screen drive mode with tracking on.</div>
-  <button class="fab" id="fabFull" title="GO — full-screen drive mode">GO</button>
-  <button class="fab" id="fabMute" title="Mute alerts">🔔</button>
-  <button class="fab active" id="fabFollow" title="Follow my position">◎</button>
-  <button class="fab" id="fabSettings" title="Settings">⚙</button>
+  <button class="fab" id="fabFull" type="button" title="GO — full-screen drive mode" aria-label="GO — full-screen drive mode">GO</button>
+  <button class="fab" id="fabMute" type="button" title="Mute alerts" aria-label="Mute alerts" aria-pressed="false"></button>
+  <button class="fab active" id="fabFollow" type="button" title="Follow my position" aria-label="Follow my position" aria-pressed="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button class="fab" id="fabSettings" type="button" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.1-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.3 7.3 0 0 0-1.73-1l-.38-2.65A.5.5 0 0 0 13.93 2h-4a.5.5 0 0 0-.5.43L9.06 5.08a7.3 7.3 0 0 0-1.73 1l-2.48-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .13.64L4.46 11c-.04.33-.06.66-.06 1s.02.67.06 1l-2.1 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.38.31.6.22l2.49-1c.53.41 1.11.75 1.73 1l.38 2.65c.04.25.25.43.5.43h4c.25 0 .46-.18.5-.43l.37-2.65a7.3 7.3 0 0 0 1.73-1l2.49 1c.22.09.48 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM11.93 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
 </div>
 
-<div id="emptyState">
+<div id="emptyState" role="dialog" aria-modal="true" aria-labelledby="emptyTitle">
   <div class="card">
     <h2 id="emptyTitle">No camera data yet</h2>
     <p id="emptyMsg">Couldn't reach the camera database and there's no cached
@@ -746,9 +799,9 @@
   </div>
 </div>
 
-<div id="startGate">
+<div id="startGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
   <div class="card">
-    <h2>Ready to drive?</h2>
+    <h2 id="gateTitle">Ready to drive?</h2>
     <p>Tap to turn on alert sounds and keep your screen awake while you drive.
     Remember: no alert doesn't mean no camera — the data is crowdsourced and
     incomplete.</p>
@@ -756,7 +809,7 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" role="status"></div>
 
 <script src="vendor/leaflet.js"></script>
 <script>
@@ -1056,7 +1109,7 @@ function onPosErr(err) {
   if (err.code === err.PERMISSION_DENIED) {
     geoDenied = true;
     setStat("stGps", "denied — no alerts", "bad");
-    toast("Location denied. Map and cameras still work; proximity alerts are off.");
+    toast("Location is off, so alerts can't fire. Allow location for this site in your browser settings, then reload. The map still works without it.", true);
     // Still useful without GPS: load data around the map view.
     const c = map.getCenter();
     ensureData(c.lat, c.lng);
@@ -1179,7 +1232,7 @@ async function fetchCameras(lat, lon) {
     const cams = await runOverpass(overpassQuery(lat, lon, radiusM));
     fetching = false;   // before merge, so updateAgeStat paints the green age
     const added = mergeCameras(cams, { kind: "circle", lat, lon, radiusM });
-    toast(cams.length + " ALPR camera" + (cams.length === 1 ? "" : "s") + " within " + S.fetchRadiusKm + " km" +
+    toast(cams.length + " camera" + (cams.length === 1 ? "" : "s") + " within " + fmtFetchLabel(S.fetchRadiusKm) +
       (added ? " (" + added + " new)" : ""));
     hideEmptyState();
   } catch (e) {
@@ -1516,6 +1569,13 @@ function calloutText(cam, dist) {
   return (KINDS[cam.kind || "alpr"] || KINDS.alpr).spoken + " ahead, " + fmtDistSpoken(dist);
 }
 
+/* Screen-reader announcement, written once per alert. The visible card's
+   distance ticks with GPS; re-announcing that every second would be noise. */
+let announcedCamId = null;
+function announceAlert(text) {
+  document.getElementById("alertLive").textContent = text;
+}
+
 let testAlertUntil = 0;   // while set, the test card holds the banner slot
 function updateBanner() {
   const el = document.getElementById("alertBanner");
@@ -1529,8 +1589,13 @@ function updateBanner() {
     el.innerHTML = "⚠ " + short + " · " + fmtDist(nearest.dist) + " away" +
       "<small>" + op + " · tap to view</small>";
     el.classList.add("show");
+    if (announcedCamId !== nearest.cam.id) {
+      announcedCamId = nearest.cam.id;
+      announceAlert(short + ", " + fmtDistSpoken(nearest.dist) + " away");
+    }
   } else {
     el.classList.remove("show");
+    if (announcedCamId !== null) { announcedCamId = null; announceAlert(""); }
   }
   document.body.classList.toggle("alerting", !!show);
 }
@@ -1542,6 +1607,8 @@ function setStat(id, text, cls) {
   const el = document.getElementById(id);
   el.className = "stat" + (cls ? " " + cls : "");
   el.querySelector("b").textContent = text;
+  // The header light follows GPS: red/amber when it's failing, green on a fix.
+  if (id === "stGps") document.getElementById("gpsDot").className = "dot " + (cls || "good");
 }
 
 function fmtDist(m) {
@@ -1652,21 +1719,50 @@ function updateCoverage() {
 }
 
 let toastTimer = null;
-function toast(msg) {
+// sticky: for errors the user has to act on — stays until dismissed.
+function toast(msg, sticky) {
   const el = document.getElementById("toast");
   el.textContent = msg;
+  el.classList.toggle("sticky", !!sticky);
   el.classList.add("show");
   clearTimeout(toastTimer);
+  if (sticky) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = "Dismiss";
+    b.onclick = () => { el.classList.remove("show", "sticky"); el.textContent = ""; };
+    el.appendChild(document.createElement("br"));
+    el.appendChild(b);
+    return;
+  }
   toastTimer = setTimeout(() => el.classList.remove("show"), 4000);
+}
+
+/* The start gate and the no-data card are modal: while either is up the app
+   behind it is inert, and focus moves to the card's one button. */
+function syncModal() {
+  const gate = document.getElementById("startGate");
+  const empty = document.getElementById("emptyState");
+  const gateOn = gate.classList.contains("show");
+  const emptyOn = empty.classList.contains("show");
+  ["updateBar", "appHeader", "views", "tabBar"].forEach(function (id) {
+    document.getElementById(id).inert = gateOn || emptyOn;
+  });
+  document.querySelector(".fabs").inert = gateOn || emptyOn;
+  empty.inert = gateOn;   // the gate sits on top of the no-data card
+  const btn = document.getElementById(gateOn ? "btnStart" : emptyOn ? "btnRetry" : "");
+  if (btn && !btn.contains(document.activeElement)) btn.focus();
 }
 
 function showEmptyState(title, msg) {
   document.getElementById("emptyTitle").textContent = title;
   document.getElementById("emptyMsg").textContent = msg;
   document.getElementById("emptyState").classList.add("show");
+  syncModal();
 }
 function hideEmptyState() {
   document.getElementById("emptyState").classList.remove("show");
+  syncModal();
 }
 
 /* ============================================================
@@ -1675,7 +1771,9 @@ function hideEmptyState() {
 function setFollow(on) {
   S.follow = on;
   saveSettings();
-  document.getElementById("fabFollow").classList.toggle("active", on);
+  const fb = document.getElementById("fabFollow");
+  fb.classList.toggle("active", on);
+  fb.setAttribute("aria-pressed", String(on));
   if (on && pos) map.panTo([pos.lat, pos.lon]);
 }
 
@@ -1741,9 +1839,9 @@ function renderNearby() {
     const bits = [short];
     if (c.brand) bits.push(escHtml(c.brand));
     if (c.direction != null) bits.push("Faces " + compass(c.direction));
-    return '<div class="nearby-item" data-lat="' + c.lat + '" data-lon="' + c.lon + '">' +
+    return '<button type="button" class="nearby-item" data-lat="' + c.lat + '" data-lon="' + c.lon + '">' +
       '<span><span class="op">' + op + '</span><br><span class="meta">' + bits.join(" · ") + '</span></span>' +
-      '<span class="dist">' + fmtDist(it.d) + '</span></div>';
+      '<span class="dist">' + fmtDist(it.d) + '</span></button>';
   }).join("");
   list.querySelectorAll(".nearby-item").forEach(function (el) {
     el.onclick = function () {
@@ -1758,21 +1856,32 @@ function setView(name) {
   document.getElementById("viewMap").classList.toggle("on", onMap);
   document.getElementById("viewNearby").classList.toggle("on", name === "nearby");
   document.getElementById("viewSetup").classList.toggle("on", name === "setup");
-  document.getElementById("tabMap").classList.toggle("on", onMap);
-  document.getElementById("tabNearby").classList.toggle("on", name === "nearby");
-  document.getElementById("tabSetup").classList.toggle("on", name === "setup");
+  [["tabMap", onMap], ["tabNearby", name === "nearby"], ["tabSetup", name === "setup"]].forEach(function (t) {
+    const tab = document.getElementById(t[0]);
+    tab.classList.toggle("on", t[1]);
+    if (t[1]) tab.setAttribute("aria-current", "page"); else tab.removeAttribute("aria-current");
+  });
   const fabs = document.querySelector(".fabs");
   if (fabs) fabs.style.display = onMap ? "" : "none";
   if (onMap && map) setTimeout(function () { map.invalidateSize(); }, 40);
   if (name === "nearby") renderNearby();
 }
 
+const ICON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+const ICONS = {
+  bell:    ICON_SVG + '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  bellOff: ICON_SVG + '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M3 3l18 18"/></svg>',
+  exitFull: ICON_SVG + '<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>',
+};
+
 function setMuted(on) {
   S.muted = on;
   saveSettings();
   const b = document.getElementById("fabMute");
   b.classList.toggle("muted-on", on);
-  b.textContent = on ? "🔕" : "🔔";
+  b.innerHTML = on ? ICONS.bellOff : ICONS.bell;
+  b.setAttribute("aria-pressed", String(on));
+  b.title = on ? "Alerts muted — tap to unmute" : "Mute alerts";
   updateBanner();
 }
 
@@ -1787,8 +1896,9 @@ function setFullMap(on) {
   document.body.classList.toggle("fullmap", on);
   const b = document.getElementById("fabFull");
   b.classList.toggle("active", on);
-  b.textContent = on ? "🗗" : "GO";
+  if (on) b.innerHTML = ICONS.exitFull; else b.textContent = "GO";
   b.title = on ? "Exit full-screen drive mode" : "GO — full-screen drive mode";
+  b.setAttribute("aria-label", b.title);
   // Best-effort native full-screen; ignore rejections (blocked contexts, iOS).
   try {
     if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -1826,6 +1936,7 @@ function bindUI() {
     el.innerHTML = "⚠ Test alert" +
       "<small>no sound? check the silent switch, media volume &amp; Bluetooth</small>";
     el.classList.add("show");
+    announceAlert("Test alert");
     document.body.classList.add("alerting");
     testAlertUntil = Date.now() + 5000;
     clearTimeout(testBannerTimer);
@@ -1997,6 +2108,7 @@ function bindUI() {
     wakeLockWanted = true;
     acquireWakeLock();
     document.getElementById("startGate").classList.remove("show");
+    syncModal();
     showGoTip();
   };
 
@@ -2052,6 +2164,7 @@ bindUI();
 
 // Ask for the one gesture that lets alerts make sound and the screen stay on.
 document.getElementById("startGate").classList.add("show");
+syncModal();
 
 if (cache) {
   applyCameras(cache.cameras);
